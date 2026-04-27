@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Controllers\Api\Student;
+
+use App\Http\Controllers\Controller;
+use App\Models\Course;
+use App\Models\ForumPost;
+use Illuminate\Http\Request;
+
+class ForumController extends Controller
+{
+    public function index(Course $course)
+    {
+        $posts = ForumPost::where('course_id', $course->id)
+            ->whereNull('parent_id')
+            ->with('user', 'replies.user')
+            ->orderByDesc('is_pinned')
+            ->latest()
+            ->get();
+
+        return response()->json(['posts' => $posts]);
+    }
+
+    public function store(Request $request, Course $course)
+    {
+        $data = $request->validate([
+            'title'   => 'nullable|string|max:200',
+            'content' => 'required|string|max:5000',
+        ]);
+
+        $post = ForumPost::create([
+            'course_id' => $course->id,
+            'user_id'   => $request->user()->id,
+            'title'     => $data['title'] ?? null,
+            'content'   => $data['content'],
+        ]);
+
+        return response()->json(['post' => $post->load('user')], 201);
+    }
+
+    public function reply(Request $request, ForumPost $post)
+    {
+        $data = $request->validate([
+            'content' => 'required|string|max:5000',
+        ]);
+
+        $reply = ForumPost::create([
+            'course_id' => $post->course_id,
+            'user_id'   => $request->user()->id,
+            'parent_id' => $post->id,
+            'content'   => $data['content'],
+        ]);
+
+        return response()->json(['reply' => $reply->load('user')], 201);
+    }
+}

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(mysql *)",
+      "PowerShell(mysql *)",
+      "Bash(composer require *)",
+      "Bash(npm install *)",
+      "Bash(curl -s -X POST http://localhost:8000/api/login -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{\"email\":\"teacher@ecolenet.be\",\"password\":\"password\"}')",
+      "Bash(npm run *)",
+      "Bash(curl -s -X POST http://localhost:8000/api/login -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"teacher@ecolenet.be\",\"password\":\"password\"}')",
+      "Bash(gh auth *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

@@ -22,16 +22,18 @@ use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login',    [AuthController::class, 'login']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::put('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/logout',           [AuthController::class, 'logout']);
+    Route::get('/me',                [AuthController::class, 'me']);
+    Route::put('/profile',           [AuthController::class, 'updateProfile']);
+    Route::post('/profile/avatar',   [AuthController::class, 'uploadAvatar']);
 
-    // Teacher routes
+    // ── Teacher routes ────────────────────────────────────────────────────────
     Route::middleware('role:teacher,admin')->prefix('teacher')->group(function () {
+
         // Classes
         Route::apiResource('classes', ClassController::class);
 
@@ -44,80 +46,92 @@ Route::middleware('auth:sanctum')->group(function () {
         // Resources
         Route::apiResource('courses.resources', ResourceController::class)->shallow();
         Route::patch('resources/{resource}/visibility', [ResourceController::class, 'toggleVisibility']);
-        Route::post('resources/{resource}/file', [ResourceController::class, 'uploadFile']);
+        Route::post('resources/{resource}/file',        [ResourceController::class, 'uploadFile']);
 
-        // Exercises (QCM builder)
-        Route::get('resources/{resource}/qcm', [ExerciseController::class, 'getQcm']);
+        // QCM builder
+        Route::get('resources/{resource}/qcm',  [ExerciseController::class, 'getQcm']);
         Route::post('resources/{resource}/qcm', [ExerciseController::class, 'saveQcm']);
 
+        // Drag & Drop builder
+        Route::get('resources/{resource}/dragdrop',  [ExerciseController::class, 'getDragDrop']);
+        Route::post('resources/{resource}/dragdrop', [ExerciseController::class, 'saveDragDrop']);
+
         // Enrollments
-        Route::get('enrollments/pending', [EnrollmentController::class, 'pending']);
-        Route::patch('enrollments/{enrollment}/approve', [EnrollmentController::class, 'approve']);
-        Route::patch('enrollments/{enrollment}/reject', [EnrollmentController::class, 'reject']);
-        Route::get('classes/{class}/students', [EnrollmentController::class, 'classStudents']);
+        Route::get('enrollments/pending',                    [EnrollmentController::class, 'pending']);
+        Route::patch('enrollments/{enrollment}/approve',     [EnrollmentController::class, 'approve']);
+        Route::patch('enrollments/{enrollment}/reject',      [EnrollmentController::class, 'reject']);
+        Route::get('classes/{class}/students',               [EnrollmentController::class, 'classStudents']);
 
         // Exercise submissions
-        Route::get('exercises/{exercise}/submissions', [ExerciseController::class, 'submissions']);
-        Route::patch('submissions/{submission}/correct', [ExerciseController::class, 'correct']);
+        Route::get('exercises/{exercise}/submissions',       [ExerciseController::class, 'submissions']);
+        Route::patch('submissions/{submission}/correct',     [ExerciseController::class, 'correct']);
 
         // Messaging
-        Route::get('messages', [TeacherMessageController::class, 'index']);
-        Route::get('messages/{user}', [TeacherMessageController::class, 'conversation']);
+        Route::get('messages',         [TeacherMessageController::class, 'index']);
+        Route::get('messages/{user}',  [TeacherMessageController::class, 'conversation']);
         Route::post('messages/{user}', [TeacherMessageController::class, 'send']);
 
         // Forum
-        Route::get('courses/{course}/forum', [TeacherForumController::class, 'index']);
+        Route::get('courses/{course}/forum',  [TeacherForumController::class, 'index']);
         Route::post('courses/{course}/forum', [TeacherForumController::class, 'store']);
-        Route::delete('forum/{post}', [TeacherForumController::class, 'destroy']);
-        Route::patch('forum/{post}/pin', [TeacherForumController::class, 'togglePin']);
+        Route::post('forum/{post}/reply',     [TeacherForumController::class, 'reply']);
+        Route::delete('forum/{post}',         [TeacherForumController::class, 'destroy']);
+        Route::patch('forum/{post}/pin',      [TeacherForumController::class, 'togglePin']);
 
         // Stats
-        Route::get('stats/overview', [StatsController::class, 'overview']);
-        Route::get('courses/{course}/stats', [StatsController::class, 'course']);
+        Route::get('stats/overview',            [StatsController::class, 'overview']);
+        Route::get('stats/courses',             [StatsController::class, 'allCourses']);
+        Route::get('courses/{course}/stats',    [StatsController::class, 'course']);
     });
 
-    // Student routes
+    // ── Student routes ────────────────────────────────────────────────────────
     Route::middleware('role:student')->prefix('student')->group(function () {
-        // Dashboard & classes
-        Route::get('dashboard', [StudentDashboardController::class, 'index']);
-        Route::get('classes', [StudentCourseController::class, 'availableClasses']);
-        Route::post('enroll', [StudentDashboardController::class, 'enroll']);
+
+        // Dashboard & enrollment
+        Route::get('dashboard',   [StudentDashboardController::class, 'index']);
+        Route::get('classes',     [StudentCourseController::class, 'availableClasses']);
+        Route::post('enroll',     [StudentDashboardController::class, 'enroll']);
 
         // Courses & resources
-        Route::get('courses', [StudentCourseController::class, 'index']);
-        Route::get('courses/{course}', [StudentCourseController::class, 'show']);
-        Route::get('resources/{resource}', [StudentCourseController::class, 'resource']);
+        Route::get('courses',             [StudentCourseController::class, 'index']);
+        Route::get('courses/{course}',    [StudentCourseController::class, 'show']);
+        Route::get('resources/{resource}',[StudentCourseController::class, 'resource']);
         Route::post('resources/{resource}/view', [ProgressController::class, 'markViewed']);
 
         // QCM
         Route::post('resources/{resource}/qcm/attempt', [QcmController::class, 'attempt']);
         Route::get('resources/{resource}/qcm/attempts', [QcmController::class, 'myAttempts']);
+        Route::get('resources/{resource}/qcm',          [QcmController::class, 'getQcm']);
+
+        // Drag & Drop
+        Route::get('resources/{resource}/dragdrop',         [QcmController::class, 'getDragDrop']);
+        Route::post('resources/{resource}/dragdrop/attempt',[ExerciseController::class, 'attemptDragDrop']);
 
         // Exercise submissions
-        Route::post('exercises/{exercise}/submit', [SubmissionController::class, 'store']);
-        Route::get('exercises/{exercise}/submission', [SubmissionController::class, 'mySubmission']);
+        Route::post('exercises/{exercise}/submit',        [SubmissionController::class, 'store']);
+        Route::get('exercises/{exercise}/submission',     [SubmissionController::class, 'mySubmission']);
 
         // Progress
-        Route::get('progress', [ProgressController::class, 'index']);
-        Route::get('courses/{course}/progress', [ProgressController::class, 'course']);
+        Route::get('progress',                 [ProgressController::class, 'index']);
+        Route::get('courses/{course}/progress',[ProgressController::class, 'course']);
 
         // Messaging
-        Route::get('messages', [StudentMessageController::class, 'index']);
-        Route::post('messages', [StudentMessageController::class, 'send']);
+        Route::get('messages',              [StudentMessageController::class, 'index']);
+        Route::post('messages',             [StudentMessageController::class, 'send']);
         Route::get('messages/conversation', [StudentMessageController::class, 'conversation']);
 
         // Forum
-        Route::get('courses/{course}/forum', [StudentForumController::class, 'index']);
+        Route::get('courses/{course}/forum',  [StudentForumController::class, 'index']);
         Route::post('courses/{course}/forum', [StudentForumController::class, 'store']);
-        Route::post('forum/{post}/reply', [StudentForumController::class, 'reply']);
+        Route::post('forum/{post}/reply',     [StudentForumController::class, 'reply']);
     });
 
-    // Admin routes
+    // ── Admin routes ──────────────────────────────────────────────────────────
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('users', [AdminUserController::class, 'index']);
-        Route::post('users', [AdminUserController::class, 'store']);
-        Route::put('users/{user}', [AdminUserController::class, 'update']);
-        Route::delete('users/{user}', [AdminUserController::class, 'destroy']);
-        Route::patch('users/{user}/status', [AdminUserController::class, 'updateStatus']);
+        Route::get('users',                   [AdminUserController::class, 'index']);
+        Route::post('users',                  [AdminUserController::class, 'store']);
+        Route::put('users/{user}',            [AdminUserController::class, 'update']);
+        Route::delete('users/{user}',         [AdminUserController::class, 'destroy']);
+        Route::patch('users/{user}/status',   [AdminUserController::class, 'updateStatus']);
     });
 });

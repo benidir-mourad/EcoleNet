@@ -94,13 +94,13 @@ class ResourceController extends Controller
     private function detectFileType(string $ext): string
     {
         return match (strtolower($ext)) {
-            'pdf'  => 'pdf',
-            'pptx' => 'pptx',
-            'docx' => 'docx',
-            'xlsx' => 'xlsx',
-            'png', 'jpg', 'jpeg', 'gif', 'svg' => 'image',
-            'mp4'  => 'video_upload',
-            default => 'pdf',
+            'pdf'                        => 'pdf',
+            'ppt', 'pptx'               => 'pptx',
+            'doc', 'docx'               => 'docx',
+            'xls', 'xlsx'               => 'xlsx',
+            'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp' => 'image',
+            'mp4', 'avi', 'mov', 'mkv'  => 'video_upload',
+            default                     => 'pdf',
         };
     }
 }

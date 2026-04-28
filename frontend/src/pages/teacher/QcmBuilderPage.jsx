@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ const emptyQuestion = () => ({
 
 export default function QcmBuilderPage() {
   const { resourceId } = useParams();
+  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -68,7 +69,7 @@ export default function QcmBuilderPage() {
     <TeacherLayout>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link to={`/teacher/courses/${data?.course_id}`} className="text-sm text-indigo-600 hover:underline">← Cours</Link>
+          <button onClick={() => navigate(-1)} className="text-sm text-indigo-600 hover:underline">← Retour</button>
           <h1 className="text-2xl font-bold text-gray-800 mt-1">Éditeur QCM</h1>
         </div>
         <button onClick={() => save.mutate()}

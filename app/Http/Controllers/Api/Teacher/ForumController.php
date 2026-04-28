@@ -44,6 +44,22 @@ class ForumController extends Controller
         return response()->json(['message' => 'Post deleted.']);
     }
 
+    public function reply(Request $request, ForumPost $post)
+    {
+        $data = $request->validate([
+            'content' => 'required|string|max:5000',
+        ]);
+
+        $reply = ForumPost::create([
+            'course_id' => $post->course_id,
+            'user_id'   => $request->user()->id,
+            'parent_id' => $post->id,
+            'content'   => $data['content'],
+        ]);
+
+        return response()->json(['reply' => $reply->load('user')], 201);
+    }
+
     public function togglePin(ForumPost $post)
     {
         $post->update(['is_pinned' => !$post->is_pinned]);

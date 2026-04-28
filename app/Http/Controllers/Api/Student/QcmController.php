@@ -95,4 +95,19 @@ class QcmController extends Controller
 
         return response()->json(['attempts' => $attempts]);
     }
+
+    public function getQcm(Resource $resource)
+    {
+        $questions = $resource->qcmQuestions()->with('options')->get();
+        return response()->json(['questions' => $questions]);
+    }
+
+    public function getDragDrop(Resource $resource)
+    {
+        $exercise = $resource->exercise;
+        if (!$exercise || $exercise->type !== 'drag_drop') {
+            return response()->json(['exercise' => null]);
+        }
+        return response()->json(['exercise' => $exercise]);
+    }
 }

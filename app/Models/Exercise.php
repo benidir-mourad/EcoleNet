@@ -14,6 +14,7 @@ class Exercise extends Model
         'title',
         'instructions',
         'type',
+        'content',
         'max_score',
         'auto_correct',
         'deadline',
@@ -21,8 +22,9 @@ class Exercise extends Model
 
     protected $casts = [
         'auto_correct' => 'boolean',
-        'deadline' => 'datetime',
-        'max_score' => 'integer',
+        'deadline'     => 'datetime',
+        'max_score'    => 'integer',
+        'content'      => 'array',
     ];
 
     public function resource()

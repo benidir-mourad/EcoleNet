@@ -8,6 +8,7 @@ use App\Models\Enrollment;
 use App\Models\ExerciseSubmission;
 use App\Models\QcmAttempt;
 use App\Models\SchoolClass;
+use App\Models\Section;
 use Illuminate\Http\Request;
 
 class StatsController extends Controller
@@ -27,6 +28,30 @@ class StatsController extends Controller
             'pending_enrollments' => $pendingEnrollments,
             'total_courses'       => $totalCourses,
         ]);
+    }
+
+    public function allCourses(Request $request)
+    {
+        $teacherId = $request->user()->id;
+
+        $courses = Course::where('teacher_id', $teacherId)
+            ->with('section.schoolClass')
+            ->get()
+            ->map(function ($course) {
+                $qcmAttempts = QcmAttempt::whereHas('resource', fn($q) => $q->where('course_id', $course->id))->get();
+                $avgQcm = $qcmAttempts->avg(fn($a) => $a->max_score > 0 ? ($a->score / $a->max_score) * 100 : 0);
+
+                return [
+                    'id'               => $course->id,
+                    'name'             => $course->name,
+                    'section'          => $course->section?->name,
+                    'class'            => $course->section?->schoolClass?->name,
+                    'qcm_attempts'     => $qcmAttempts->count(),
+                    'avg_qcm_percent'  => round($avgQcm ?? 0, 1),
+                ];
+            });
+
+        return response()->json(['courses' => $courses]);
     }
 
     public function course(Course $course)

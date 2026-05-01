@@ -9,6 +9,7 @@ use App\Models\QcmOption;
 use App\Models\QcmQuestion;
 use App\Models\Resource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ExerciseController extends Controller
 {
@@ -144,6 +145,45 @@ class ExerciseController extends Controller
     }
 
     // ── File submissions ─────────────────────────────────────────────────────
+
+    public function enableSubmission(Request $request, Resource $resource)
+    {
+        $data = $request->validate([
+            'instructions' => 'nullable|string|max:1000',
+            'max_score'    => 'nullable|integer|min:1|max:100',
+            'deadline'     => 'nullable|date',
+        ]);
+
+        $exercise = Exercise::updateOrCreate(
+            ['resource_id' => $resource->id],
+            [
+                'title'        => $resource->title,
+                'instructions' => $data['instructions'] ?? null,
+                'type'         => 'file_upload',
+                'content'      => null,
+                'max_score'    => $data['max_score'] ?? 20,
+                'auto_correct' => false,
+                'deadline'     => $data['deadline'] ?? null,
+            ]
+        );
+
+        $resource->update(['file_type' => 'file_upload']);
+
+        return response()->json(['exercise' => $exercise]);
+    }
+
+    public function resourceSubmissions(Resource $resource)
+    {
+        $exercise = $resource->exercise;
+
+        if (!$exercise) {
+            return response()->json(['submissions' => [], 'exercise' => null]);
+        }
+
+        $submissions = $exercise->submissions()->with('student')->latest()->get();
+
+        return response()->json(['submissions' => $submissions, 'exercise' => $exercise]);
+    }
 
     public function submissions(Exercise $exercise)
     {

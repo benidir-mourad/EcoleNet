@@ -16,6 +16,7 @@ import StatsPage from './pages/teacher/StatsPage';
 import QcmBuilderPage from './pages/teacher/QcmBuilderPage';
 import TeacherForumPage from './pages/teacher/ForumPage';
 import DragDropBuilderPage from './pages/teacher/DragDropBuilderPage';
+import SubmissionsPage from './pages/teacher/SubmissionsPage';
 
 import StudentDashboard from './pages/student/Dashboard';
 import CoursePage from './pages/student/CoursePage';
@@ -24,6 +25,7 @@ import ProgressPage from './pages/student/ProgressPage';
 import StudentMessagesPage from './pages/student/MessagesPage';
 import StudentForumPage from './pages/student/ForumPage';
 import DragDropPage from './pages/student/DragDropPage';
+import ExercisePage from './pages/student/ExercisePage';
 
 import AdminDashboard from './pages/admin/Dashboard';
 
@@ -59,15 +61,17 @@ export default function App() {
           <Route path="/teacher/enrollments"                      element={T(<EnrollmentsPage />)} />
           <Route path="/teacher/messages"                         element={T(<TeacherMessagesPage />)} />
           <Route path="/teacher/stats"                            element={T(<StatsPage />)} />
-          <Route path="/teacher/resources/:resourceId/qcm"        element={T(<QcmBuilderPage />)} />
-          <Route path="/teacher/resources/:resourceId/dragdrop"   element={T(<DragDropBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/qcm"          element={T(<QcmBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/dragdrop"     element={T(<DragDropBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/submissions"  element={T(<SubmissionsPage />)} />
 
           {/* Student */}
           <Route path="/student/dashboard"                        element={S(<StudentDashboard />)} />
           <Route path="/student/courses/:courseId"                element={S(<CoursePage />)} />
           <Route path="/student/courses/:courseId/forum"          element={S(<StudentForumPage />)} />
-          <Route path="/student/resources/:resourceId/qcm"        element={S(<QcmPage />)} />
-          <Route path="/student/resources/:resourceId/dragdrop"   element={S(<DragDropPage />)} />
+          <Route path="/student/resources/:resourceId/qcm"          element={S(<QcmPage />)} />
+          <Route path="/student/resources/:resourceId/dragdrop"     element={S(<DragDropPage />)} />
+          <Route path="/student/resources/:resourceId/exercise"     element={S(<ExercisePage />)} />
           <Route path="/student/progress"                         element={S(<ProgressPage />)} />
           <Route path="/student/messages"                         element={S(<StudentMessagesPage />)} />
 

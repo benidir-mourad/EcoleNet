@@ -1,19 +1,24 @@
 import { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Users, MessageSquare, BarChart2, LogOut, User, Camera, X } from 'lucide-react';
+import {
+  LayoutDashboard, BookOpen, Users, MessageSquare, BarChart2,
+  LogOut, Camera, X, Cpu,
+} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useMutation } from '@tanstack/react-query';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
+import AppHeader from './AppHeader';
+import AppFooter from './AppFooter';
 
 const nav = [
-  { to: '/teacher/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
-  { to: '/teacher/classes',   icon: BookOpen,         label: 'Classes & Cours'  },
-  { to: '/teacher/enrollments', icon: Users,          label: 'Inscriptions'     },
-  { to: '/teacher/messages',  icon: MessageSquare,    label: 'Messages'         },
-  { to: '/teacher/stats',     icon: BarChart2,        label: 'Statistiques'     },
+  { to: '/teacher/dashboard',   icon: LayoutDashboard, label: 'Tableau de bord' },
+  { to: '/teacher/classes',     icon: BookOpen,         label: 'Classes & Cours' },
+  { to: '/teacher/enrollments', icon: Users,            label: 'Inscriptions'    },
+  { to: '/teacher/messages',    icon: MessageSquare,    label: 'Messages'        },
+  { to: '/teacher/stats',       icon: BarChart2,        label: 'Statistiques'   },
 ];
 
 function ProfileModal({ onClose }) {
@@ -79,7 +84,6 @@ function ProfileModal({ onClose }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Avatar */}
           <div className="flex flex-col items-center gap-3 pb-2">
             <div
               className="relative w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center cursor-pointer group"
@@ -148,6 +152,41 @@ function ProfileModal({ onClose }) {
   );
 }
 
+/* ── Circuit board SVG ───────────────────────────────────── */
+function CircuitDecoration() {
+  return (
+    <div className="px-4 pb-1 anim-circuit">
+      <svg viewBox="0 0 200 52" fill="none" stroke="currentColor" strokeWidth="1.4"
+        className="w-full text-white/60">
+        <line x1="0"   y1="12" x2="50"  y2="12" />
+        <circle cx="50"  cy="12" r="3" fill="currentColor" />
+        <line x1="50"  y1="12" x2="50"  y2="28" />
+        <line x1="50"  y1="28" x2="90"  y2="28" />
+        <rect  x="90"  y="22"  width="28" height="12" rx="2" />
+        <line x1="95"  y1="22" x2="95"  y2="16" />
+        <line x1="103" y1="22" x2="103" y2="16" />
+        <line x1="111" y1="22" x2="111" y2="16" />
+        <line x1="95"  y1="34" x2="95"  y2="40" />
+        <line x1="103" y1="34" x2="103" y2="40" />
+        <line x1="111" y1="34" x2="111" y2="40" />
+        <line x1="118" y1="28" x2="160" y2="28" />
+        <circle cx="160" cy="28" r="3" fill="currentColor" />
+        <line x1="160" y1="28" x2="160" y2="12" />
+        <line x1="160" y1="12" x2="200" y2="12" />
+        <circle cx="20"  cy="12" r="2" />
+        <circle cx="180" cy="12" r="2" />
+        <circle cx="75"  cy="28" r="2" />
+        <line x1="0"   y1="44" x2="40"  y2="44" />
+        <circle cx="40"  cy="44" r="2" />
+        <line x1="40"  y1="44" x2="40"  y2="40" />
+        <line x1="140" y1="44" x2="200" y2="44" />
+        <circle cx="140" cy="44" r="2" />
+        <line x1="140" y1="44" x2="140" y2="40" />
+      </svg>
+    </div>
+  );
+}
+
 export default function TeacherLayout({ children }) {
   const { logout } = useAuth();
   const { user } = useAuthStore();
@@ -159,14 +198,36 @@ export default function TeacherLayout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-64 bg-indigo-800 text-white flex flex-col">
-        <div className="p-5 border-b border-indigo-700">
-          <h2 className="text-xl font-bold mb-3">EcoleNet</h2>
+      {/* ── Sidebar ────────────────────────────────── */}
+      <aside className="w-64 bg-indigo-900 text-white flex flex-col"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)',
+          backgroundSize: '18px 18px',
+        }}
+      >
+        {/* Logo */}
+        <div className="p-5 border-b border-indigo-700/60">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+                <Cpu size={17} className="text-indigo-200" />
+              </div>
+              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-indigo-900 anim-pulse-dot" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold font-mono leading-tight">
+                Ecole<span className="text-indigo-300">Net</span>
+              </h2>
+              <p className="text-xs text-indigo-400 font-mono">Professeur</p>
+            </div>
+          </div>
+
+          {/* Profile button */}
           <button
             onClick={() => setProfileOpen(true)}
-            className="flex items-center gap-3 w-full hover:bg-indigo-700 rounded-lg p-2 transition text-left"
+            className="flex items-center gap-3 w-full hover:bg-indigo-700/50 rounded-lg p-2 transition text-left"
           >
-            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 overflow-hidden border border-indigo-500">
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" className="w-9 h-9 object-cover" />
                 : <span className="text-sm font-semibold">{initials}</span>
@@ -179,14 +240,15 @@ export default function TeacherLayout({ children }) {
           </button>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 p-4 space-y-1">
           {nav.map(({ to, icon: Icon, label }) => (
             <Link key={to} to={to}
               className={clsx(
                 'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-sm font-medium',
                 pathname.startsWith(to)
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-indigo-200 hover:bg-indigo-700'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-indigo-200 hover:bg-indigo-700/60'
               )}
             >
               <Icon size={18} /> {label}
@@ -194,17 +256,28 @@ export default function TeacherLayout({ children }) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-indigo-700">
-          <button onClick={logout}
-            className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-indigo-200 hover:bg-indigo-700 transition text-sm">
-            <LogOut size={18} /> Déconnexion
-          </button>
+        {/* Circuit + Logout */}
+        <div className="border-t border-indigo-700/60">
+          <CircuitDecoration />
+          <div className="px-4 pb-4">
+            <button onClick={logout}
+              className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-indigo-300 hover:bg-indigo-700/60 transition text-sm">
+              <LogOut size={18} /> Déconnexion
+            </button>
+          </div>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
-      </main>
+      {/* ── Main area ─────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <AppHeader color="indigo" />
+        <main className="flex-1 overflow-auto">
+          <div className="p-8 anim-slide-up">
+            {children}
+            <AppFooter color="indigo" />
+          </div>
+        </main>
+      </div>
 
       {profileOpen && <ProfileModal onClose={() => setProfileOpen(false)} />}
     </div>

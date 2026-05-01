@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Pin, Plus, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { MessageCircle, Pin, Plus, ChevronDown, ChevronUp, Send, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import StudentLayout from '../../components/layout/StudentLayout';
@@ -46,12 +46,13 @@ function ReplyItem({ reply }) {
   );
 }
 
-function PostCard({ post, courseId }) {
+function PostCard({ post, courseId, onDelete }) {
   const qc = useQueryClient();
   const { user: me } = useAuthStore();
   const [expanded, setExpanded] = useState(post.is_pinned);
   const [replyText, setReplyText] = useState('');
   const isTeacher = post.user?.role === 'teacher';
+  const isOwn = post.user_id === me?.id;
 
   const sendReply = useMutation({
     mutationFn: () => api.post(`/student/forum/${post.id}/reply`, { content: replyText }),
@@ -84,6 +85,15 @@ function PostCard({ post, courseId }) {
             <span className="text-xs text-gray-400 ml-auto">
               {new Date(post.created_at).toLocaleString('fr-BE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
             </span>
+            {isOwn && (
+              <button
+                onClick={() => window.confirm('Supprimer ce post ?') && onDelete(post.id)}
+                className="p-1 text-gray-300 hover:text-red-500 rounded transition"
+                title="Supprimer"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
 
           {post.title && <h4 className="font-semibold text-gray-800 mb-1">{post.title}</h4>}
@@ -153,6 +163,12 @@ export default function StudentForumPage() {
     onError: () => toast.error('Erreur lors de la publication'),
   });
 
+  const deletePost = useMutation({
+    mutationFn: (id) => api.delete(`/student/forum/${id}`),
+    onSuccess: () => { qc.invalidateQueries(['student-forum', courseId]); toast.success('Post supprimé'); },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
   const posts = data?.posts || [];
   const course = courseData?.course;
 
@@ -211,7 +227,7 @@ export default function StudentForumPage() {
 
       <div className="space-y-4">
         {posts.map(post => (
-          <PostCard key={post.id} post={post} courseId={courseId} />
+          <PostCard key={post.id} post={post} courseId={courseId} onDelete={(id) => deletePost.mutate(id)} />
         ))}
         {!isLoading && posts.length === 0 && (
           <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-400">

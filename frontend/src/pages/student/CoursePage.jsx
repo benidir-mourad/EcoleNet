@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   FileText, Video, Link as LinkIcon, CheckSquare,
-  GripVertical, MessageCircle, Eye,
+  GripVertical, MessageCircle, Eye, Upload,
 } from 'lucide-react';
 import api from '../../services/api';
 import StudentLayout from '../../components/layout/StudentLayout';
@@ -43,6 +43,7 @@ const FILE_ICONS = {
   qcm:               CheckSquare,
   drag_drop:         GripVertical,
   excel_interactive: CheckSquare,
+  file_upload:       Upload,
 };
 
 /* Ressources pouvant être ouvertes dans le visionneur ou via Office */
@@ -90,7 +91,8 @@ export default function CoursePage() {
       <div className="grid gap-3">
         {resources.map(resource => {
           const Icon = FILE_ICONS[resource.file_type] || FileText;
-          const isEmpty = !resource.file_path && !resource.external_url;
+          const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload'];
+          const isEmpty = !resource.file_path && !resource.external_url && !INTERACTIVE.includes(resource.file_type);
           const colorCls = TYPE_COLORS[resource.type] || 'bg-gray-50 text-gray-600';
           const canView = !isEmpty && VIEWABLE.includes(resource.file_type);
 
@@ -136,6 +138,17 @@ export default function CoursePage() {
                       className="flex items-center gap-1.5 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-purple-700"
                     >
                       <GripVertical size={14} /> Faire l'exercice
+                    </Link>
+                  )}
+
+                  {/* Remise de fichier */}
+                  {resource.file_type === 'file_upload' && (
+                    <Link
+                      to={`/student/resources/${resource.id}/exercise`}
+                      onClick={() => markViewed.mutate(resource.id)}
+                      className="flex items-center gap-1.5 bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-amber-700"
+                    >
+                      <Upload size={14} /> Remettre
                     </Link>
                   )}
 

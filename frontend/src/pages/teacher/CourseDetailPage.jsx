@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Upload, ExternalLink, CheckSquare, Pencil, MessageCircle, GripVertical, PlayCircle } from 'lucide-react';
+import { Eye, EyeOff, Upload, ExternalLink, CheckSquare, Pencil, MessageCircle, GripVertical, PlayCircle, FileUp, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
@@ -46,6 +46,8 @@ function ResourceCard({ resource, courseId, onPreview }) {
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [showUrlModal, setShowUrlModal] = useState(false);
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [subConfig, setSubConfig] = useState({ instructions: '', max_score: 20, deadline: '' });
   const [url, setUrl] = useState(resource.external_url || '');
 
   const toggleVisibility = useMutation({
@@ -60,6 +62,21 @@ function ResourceCard({ resource, courseId, onPreview }) {
       setShowUrlModal(false);
       toast.success('Lien enregistré');
     },
+  });
+
+  const enableSubmission = useMutation({
+    mutationFn: () =>
+      api.post(`/teacher/resources/${resource.id}/file_exercise`, {
+        instructions: subConfig.instructions || null,
+        max_score: Number(subConfig.max_score) || 20,
+        deadline: subConfig.deadline || null,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries(['teacher-course', courseId]);
+      setShowSubmissionModal(false);
+      toast.success('Remise de fichier activée');
+    },
+    onError: () => toast.error('Erreur lors de l\'activation'),
   });
 
   const handleUpload = async (e) => {
@@ -158,6 +175,24 @@ function ResourceCard({ resource, courseId, onPreview }) {
             className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition">
             <GripVertical size={18} />
           </Link>
+
+          {resource.file_type === 'file_upload' ? (
+            <Link
+              title="Voir les remises"
+              to={`/teacher/resources/${resource.id}/submissions`}
+              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+            >
+              <Users size={18} />
+            </Link>
+          ) : (
+            <button
+              title="Activer la remise de fichier"
+              onClick={() => setShowSubmissionModal(true)}
+              className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+            >
+              <FileUp size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -180,6 +215,60 @@ function ResourceCard({ resource, courseId, onPreview }) {
                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg disabled:opacity-60">
                 Enregistrer
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSubmissionModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="font-semibold mb-1">Activer la remise de fichier</h3>
+            <p className="text-sm text-gray-500 mb-4">Les élèves pourront déposer un fichier ou du texte.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">Consignes (optionnel)</label>
+                <textarea
+                  value={subConfig.instructions}
+                  onChange={e => setSubConfig({ ...subConfig, instructions: e.target.value })}
+                  rows={3}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Décrivez ce que les élèves doivent remettre…"
+                />
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-sm text-gray-600 mb-1 block">Note max</label>
+                  <input
+                    type="number" min={1} max={100}
+                    value={subConfig.max_score}
+                    onChange={e => setSubConfig({ ...subConfig, max_score: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm text-gray-600 mb-1 block">Date limite (optionnel)</label>
+                  <input
+                    type="datetime-local"
+                    value={subConfig.deadline}
+                    onChange={e => setSubConfig({ ...subConfig, deadline: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setShowSubmissionModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Annuler
+                </button>
+                <button
+                  onClick={() => enableSubmission.mutate()}
+                  disabled={enableSubmission.isPending}
+                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  {enableSubmission.isPending ? 'Activation…' : 'Activer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

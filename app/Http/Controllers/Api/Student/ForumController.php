@@ -4,13 +4,26 @@ namespace App\Http\Controllers\Api\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\ForumPost;
 use Illuminate\Http\Request;
 
 class ForumController extends Controller
 {
-    public function index(Course $course)
+    private function checkEnrolled(Request $request, Course $course): bool
     {
+        return Enrollment::where('student_id', $request->user()->id)
+            ->where('class_id', $course->section->class_id)
+            ->where('status', 'approved')
+            ->exists();
+    }
+
+    public function index(Request $request, Course $course)
+    {
+        if (!$this->checkEnrolled($request, $course)) {
+            return response()->json(['message' => 'Non inscrit à ce cours.'], 403);
+        }
+
         $posts = ForumPost::where('course_id', $course->id)
             ->whereNull('parent_id')
             ->with('user', 'replies.user')
@@ -23,6 +36,10 @@ class ForumController extends Controller
 
     public function store(Request $request, Course $course)
     {
+        if (!$this->checkEnrolled($request, $course)) {
+            return response()->json(['message' => 'Non inscrit à ce cours.'], 403);
+        }
+
         $data = $request->validate([
             'title'   => 'nullable|string|max:200',
             'content' => 'required|string|max:5000',
@@ -40,6 +57,12 @@ class ForumController extends Controller
 
     public function reply(Request $request, ForumPost $post)
     {
+        $course = Course::findOrFail($post->course_id);
+
+        if (!$this->checkEnrolled($request, $course)) {
+            return response()->json(['message' => 'Non inscrit à ce cours.'], 403);
+        }
+
         $data = $request->validate([
             'content' => 'required|string|max:5000',
         ]);
@@ -52,5 +75,16 @@ class ForumController extends Controller
         ]);
 
         return response()->json(['reply' => $reply->load('user')], 201);
+    }
+
+    public function destroy(Request $request, ForumPost $post)
+    {
+        if ($post->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Interdit.'], 403);
+        }
+
+        $post->delete();
+
+        return response()->json(['message' => 'Supprimé.']);
     }
 }

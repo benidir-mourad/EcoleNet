@@ -1,0 +1,184 @@
+import { useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Upload, CheckCircle, Clock, FileText, X, ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../../services/api';
+import StudentLayout from '../../components/layout/StudentLayout';
+
+export default function ExercisePage() {
+  const { resourceId } = useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [file, setFile] = useState(null);
+  const [content, setContent] = useState('');
+  const fileInputRef = useRef();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['student-exercise', resourceId],
+    queryFn: () =>
+      api.get(`/student/resources/${resourceId}/submission`).then(r => r.data),
+  });
+
+  const submit = useMutation({
+    mutationFn: () => {
+      const form = new FormData();
+      if (file) form.append('file', file);
+      if (content.trim()) form.append('content', content);
+      return api.post(`/student/resources/${resourceId}/submit`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries(['student-exercise', resourceId]);
+      setFile(null);
+      setContent('');
+      toast.success('Travail remis avec succès !');
+    },
+    onError: e => toast.error(e.response?.data?.message || 'Erreur lors de la remise'),
+  });
+
+  const exercise = data?.exercise;
+  const submission = data?.submission;
+  const isGraded = submission?.status === 'corrected';
+  const isSubmitted = !!submission;
+  const isDeadlinePassed = exercise?.deadline && new Date(exercise.deadline) < new Date();
+  const canSubmit = (file || content.trim()) && !submit.isPending;
+
+  return (
+    <StudentLayout>
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-sm text-emerald-600 hover:underline"
+        >
+          <ArrowLeft size={14} /> Retour au cours
+        </button>
+
+        <div className="mt-3">
+          <h1 className="text-2xl font-bold text-gray-800">
+            {exercise?.title || 'Exercice'}
+          </h1>
+          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 flex-wrap">
+            {exercise?.max_score && <span>Note max : {exercise.max_score}</span>}
+            {exercise?.deadline && (
+              <span className={isDeadlinePassed ? 'text-red-500 font-medium' : ''}>
+                Date limite :{' '}
+                {new Date(exercise.deadline).toLocaleString('fr-BE', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+                {isDeadlinePassed && ' — Délai dépassé'}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {exercise?.instructions && (
+        <div className="bg-blue-50 rounded-xl p-4 mb-6 text-sm text-blue-800 leading-relaxed">
+          {exercise.instructions}
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="text-center text-gray-400 py-12">Chargement...</div>
+      )}
+
+      {isGraded && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle size={18} className="text-green-600" />
+            <span className="font-semibold text-green-800">Corrigé</span>
+            <span className="text-lg font-bold text-green-700 ml-auto">
+              {submission.score} / {exercise?.max_score}
+            </span>
+          </div>
+          {submission.teacher_comment && (
+            <p className="text-sm text-gray-700 mt-2 border-t border-green-200 pt-2">
+              {submission.teacher_comment}
+            </p>
+          )}
+        </div>
+      )}
+
+      {isSubmitted && !isGraded && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+          <Clock size={18} className="text-amber-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">
+              Remis le{' '}
+              {new Date(submission.submitted_at).toLocaleString('fr-BE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit',
+              })}
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5">En attente de correction par le professeur</p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h2 className="font-semibold text-gray-800 mb-5">
+          {isSubmitted ? 'Soumettre à nouveau' : 'Déposer votre travail'}
+        </h2>
+
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition mb-4 ${
+            file
+              ? 'border-emerald-400 bg-emerald-50'
+              : 'border-gray-200 hover:border-emerald-400 hover:bg-emerald-50'
+          }`}
+        >
+          {file ? (
+            <div className="flex items-center justify-center gap-3">
+              <FileText size={20} className="text-emerald-600" />
+              <span className="text-sm text-emerald-700 font-medium">{file.name}</span>
+              <button
+                onClick={e => { e.stopPropagation(); setFile(null); }}
+                className="text-gray-400 hover:text-red-500 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Upload size={28} className="mx-auto mb-2 text-gray-300" />
+              <p className="text-sm text-gray-500">
+                Cliquez pour choisir un fichier
+              </p>
+              <p className="text-xs text-gray-400 mt-1">PDF, Word, Excel, images… (max 20 Mo)</p>
+            </>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={e => setFile(e.target.files[0] || null)}
+          />
+        </div>
+
+        <textarea
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          placeholder="Ou rédigez votre réponse ici (optionnel si un fichier est fourni)…"
+          rows={4}
+          className="w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 mb-5"
+        />
+
+        <button
+          onClick={() => canSubmit && submit.mutate()}
+          disabled={!canSubmit}
+          className="w-full bg-emerald-600 text-white py-3 rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 transition"
+        >
+          {submit.isPending
+            ? 'Envoi en cours…'
+            : isSubmitted
+            ? 'Resoumettre le travail'
+            : 'Remettre le travail'}
+        </button>
+      </div>
+    </StudentLayout>
+  );
+}

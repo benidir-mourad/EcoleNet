@@ -63,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('classes/{class}/students',               [EnrollmentController::class, 'classStudents']);
 
         // Exercise submissions
+        Route::post('resources/{resource}/file_exercise',    [ExerciseController::class, 'enableSubmission']);
+        Route::get('resources/{resource}/submissions',       [ExerciseController::class, 'resourceSubmissions']);
         Route::get('exercises/{exercise}/submissions',       [ExerciseController::class, 'submissions']);
         Route::patch('submissions/{submission}/correct',     [ExerciseController::class, 'correct']);
 
@@ -108,6 +110,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('resources/{resource}/dragdrop/attempt',[ExerciseController::class, 'attemptDragDrop']);
 
         // Exercise submissions
+        Route::post('resources/{resource}/submit',        [SubmissionController::class, 'storeForResource']);
+        Route::get('resources/{resource}/submission',     [SubmissionController::class, 'mySubmissionForResource']);
         Route::post('exercises/{exercise}/submit',        [SubmissionController::class, 'store']);
         Route::get('exercises/{exercise}/submission',     [SubmissionController::class, 'mySubmission']);
 
@@ -124,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('courses/{course}/forum',  [StudentForumController::class, 'index']);
         Route::post('courses/{course}/forum', [StudentForumController::class, 'store']);
         Route::post('forum/{post}/reply',     [StudentForumController::class, 'reply']);
+        Route::delete('forum/{post}',         [StudentForumController::class, 'destroy']);
     });
 
     // ── Admin routes ──────────────────────────────────────────────────────────

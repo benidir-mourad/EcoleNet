@@ -146,10 +146,34 @@ class ExerciseController extends Controller
 
     // ── File submissions ─────────────────────────────────────────────────────
 
+    public function getExercise(Resource $resource)
+    {
+        return response()->json(['exercise' => $resource->exercise]);
+    }
+
+    public function updateExercise(Request $request, Resource $resource)
+    {
+        $exercise = $resource->exercise;
+
+        if (!$exercise) {
+            return response()->json(['message' => 'Exercise not found.'], 404);
+        }
+
+        $data = $request->validate([
+            'instructions' => 'nullable|string|max:100000',
+            'max_score'    => 'nullable|integer|min:1|max:100',
+            'deadline'     => 'nullable|date',
+        ]);
+
+        $exercise->update(array_filter($data, fn($v) => $v !== null));
+
+        return response()->json(['exercise' => $exercise->fresh()]);
+    }
+
     public function enableSubmission(Request $request, Resource $resource)
     {
         $data = $request->validate([
-            'instructions' => 'nullable|string|max:1000',
+            'instructions' => 'nullable|string|max:2000',
             'max_score'    => 'nullable|integer|min:1|max:100',
             'deadline'     => 'nullable|date',
         ]);

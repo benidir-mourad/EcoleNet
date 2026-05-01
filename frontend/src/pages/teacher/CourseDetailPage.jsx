@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Upload, ExternalLink, CheckSquare, Pencil, MessageCircle, GripVertical, PlayCircle, FileUp, Users } from 'lucide-react';
+import { Eye, EyeOff, Upload, ExternalLink, CheckSquare, Pencil, MessageCircle, GripVertical, PlayCircle, FileUp, Users, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
@@ -177,13 +177,22 @@ function ResourceCard({ resource, courseId, onPreview }) {
           </Link>
 
           {resource.file_type === 'file_upload' ? (
-            <Link
-              title="Voir les remises"
-              to={`/teacher/resources/${resource.id}/submissions`}
-              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
-            >
-              <Users size={18} />
-            </Link>
+            <>
+              <Link
+                title="Modifier l'énoncé"
+                to={`/teacher/resources/${resource.id}/exercise-editor`}
+                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+              >
+                <BookOpen size={18} />
+              </Link>
+              <Link
+                title="Voir les remises"
+                to={`/teacher/resources/${resource.id}/submissions`}
+                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+              >
+                <Users size={18} />
+              </Link>
+            </>
           ) : (
             <button
               title="Activer la remise de fichier"

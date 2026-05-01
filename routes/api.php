@@ -64,6 +64,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Exercise submissions
         Route::post('resources/{resource}/file_exercise',    [ExerciseController::class, 'enableSubmission']);
+        Route::get('resources/{resource}/file_exercise',     [ExerciseController::class, 'getExercise']);
+        Route::put('resources/{resource}/file_exercise',     [ExerciseController::class, 'updateExercise']);
         Route::get('resources/{resource}/submissions',       [ExerciseController::class, 'resourceSubmissions']);
         Route::get('exercises/{exercise}/submissions',       [ExerciseController::class, 'submissions']);
         Route::patch('submissions/{submission}/correct',     [ExerciseController::class, 'correct']);

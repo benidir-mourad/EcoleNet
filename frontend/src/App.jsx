@@ -17,6 +17,7 @@ import QcmBuilderPage from './pages/teacher/QcmBuilderPage';
 import TeacherForumPage from './pages/teacher/ForumPage';
 import DragDropBuilderPage from './pages/teacher/DragDropBuilderPage';
 import SubmissionsPage from './pages/teacher/SubmissionsPage';
+import ExerciseEditorPage from './pages/teacher/ExerciseEditorPage';
 
 import StudentDashboard from './pages/student/Dashboard';
 import CoursePage from './pages/student/CoursePage';
@@ -63,7 +64,8 @@ export default function App() {
           <Route path="/teacher/stats"                            element={T(<StatsPage />)} />
           <Route path="/teacher/resources/:resourceId/qcm"          element={T(<QcmBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/dragdrop"     element={T(<DragDropBuilderPage />)} />
-          <Route path="/teacher/resources/:resourceId/submissions"  element={T(<SubmissionsPage />)} />
+          <Route path="/teacher/resources/:resourceId/submissions"     element={T(<SubmissionsPage />)} />
+          <Route path="/teacher/resources/:resourceId/exercise-editor" element={T(<ExerciseEditorPage />)} />
 
           {/* Student */}
           <Route path="/student/dashboard"                        element={S(<StudentDashboard />)} />

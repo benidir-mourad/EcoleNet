@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Teacher\ClassController;
 use App\Http\Controllers\Api\Teacher\SectionController;
 use App\Http\Controllers\Api\Teacher\CourseController;
+use App\Http\Controllers\Api\Teacher\ChapterController;
 use App\Http\Controllers\Api\Teacher\ResourceController;
 use App\Http\Controllers\Api\Teacher\EnrollmentController;
 use App\Http\Controllers\Api\Teacher\ExerciseController;
@@ -43,8 +44,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Courses
         Route::apiResource('sections.courses', CourseController::class)->shallow();
 
+        // Chapters
+        Route::post('courses/{course}/chapters',    [ChapterController::class, 'store']);
+        Route::put('chapters/{chapter}',            [ChapterController::class, 'update']);
+        Route::delete('chapters/{chapter}',         [ChapterController::class, 'destroy']);
+
         // Resources
         Route::apiResource('courses.resources', ResourceController::class)->shallow();
+        Route::post('chapters/{chapter}/resources', [ResourceController::class, 'storeForChapter']);
         Route::patch('resources/{resource}/visibility', [ResourceController::class, 'toggleVisibility']);
         Route::post('resources/{resource}/file',        [ResourceController::class, 'uploadFile']);
 

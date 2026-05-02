@@ -33,9 +33,19 @@ class Course extends Model
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
+    public function chapters()
+    {
+        return $this->hasMany(Chapter::class)->orderBy('order')->orderBy('id');
+    }
+
     public function resources()
     {
         return $this->hasMany(Resource::class)->orderBy('order');
+    }
+
+    public function rootResources()
+    {
+        return $this->hasMany(Resource::class)->whereNull('chapter_id')->orderBy('order');
     }
 
     public function forumPosts()

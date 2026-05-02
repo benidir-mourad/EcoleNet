@@ -6,11 +6,14 @@ import {
   PlayCircle, FileUp, Users, BookOpen, Plus, Trash2, Zap,
   CheckSquare, GripVertical, ChevronDown, ChevronUp,
   Monitor, RefreshCw, ClipboardList, Award, CheckCircle, FileText,
+  BookMarked,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
 import ResourceViewer from '../../components/ResourceViewer';
+
+/* ─── Constants ─────────────────────────────────────────────────────────── */
 
 const TYPE_LABELS = {
   presentation:        'Présentation',
@@ -35,33 +38,31 @@ const TYPE_ICON_MAP = {
 };
 
 const TYPE_STYLE = {
-  presentation:        { bg: 'bg-blue-50',   text: 'text-blue-600',   border: 'border-blue-200',   badge: 'text-blue-600 bg-blue-50'   },
-  syllabus:            { bg: 'bg-purple-50',  text: 'text-purple-600', border: 'border-purple-200', badge: 'text-purple-600 bg-purple-50' },
-  exercise:            { bg: 'bg-amber-50',   text: 'text-amber-600',  border: 'border-amber-200',  badge: 'text-amber-600 bg-amber-50'  },
-  exercise_solution:   { bg: 'bg-green-50',   text: 'text-green-600',  border: 'border-green-200',  badge: 'text-green-600 bg-green-50'  },
-  revision:            { bg: 'bg-cyan-50',    text: 'text-cyan-600',   border: 'border-cyan-200',   badge: 'text-cyan-600 bg-cyan-50'    },
-  revision_solution:   { bg: 'bg-teal-50',    text: 'text-teal-600',   border: 'border-teal-200',   badge: 'text-teal-600 bg-teal-50'    },
-  evaluation:          { bg: 'bg-red-50',     text: 'text-red-600',    border: 'border-red-200',    badge: 'text-red-600 bg-red-50'      },
-  evaluation_solution: { bg: 'bg-rose-50',    text: 'text-rose-600',   border: 'border-rose-200',   badge: 'text-rose-600 bg-rose-50'    },
+  presentation:        { bg: 'bg-blue-50',   text: 'text-blue-600',   border: 'border-blue-200'   },
+  syllabus:            { bg: 'bg-purple-50',  text: 'text-purple-600', border: 'border-purple-200' },
+  exercise:            { bg: 'bg-amber-50',   text: 'text-amber-600',  border: 'border-amber-200'  },
+  exercise_solution:   { bg: 'bg-green-50',   text: 'text-green-600',  border: 'border-green-200'  },
+  revision:            { bg: 'bg-cyan-50',    text: 'text-cyan-600',   border: 'border-cyan-200'   },
+  revision_solution:   { bg: 'bg-teal-50',    text: 'text-teal-600',   border: 'border-teal-200'   },
+  evaluation:          { bg: 'bg-red-50',     text: 'text-red-600',    border: 'border-red-200'    },
+  evaluation_solution: { bg: 'bg-rose-50',    text: 'text-rose-600',   border: 'border-rose-200'   },
 };
 
-// Types that get the 4-option exercise format picker
 const INTERACTIVE_TYPES = ['exercise', 'revision', 'evaluation'];
-
-const VIEWABLE_TYPES = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
+const VIEWABLE_TYPES    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
 
 /* ─── ResourceCard ─────────────────────────────────────────────────────── */
 
 function ResourceCard({ resource, courseId, onPreview }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [uploading, setUploading]           = useState(false);
-  const [showUrlModal, setShowUrlModal]     = useState(false);
-  const [showSubModal, setShowSubModal]     = useState(false);
-  const [showTypeModal, setShowTypeModal]   = useState(false);
-  const [confirmDelete, setConfirmDelete]   = useState(false);
-  const [subConfig, setSubConfig]           = useState({ instructions: '', max_score: 20, deadline: '' });
-  const [url, setUrl]                       = useState(resource.external_url || '');
+  const [uploading, setUploading]         = useState(false);
+  const [showUrlModal, setShowUrlModal]   = useState(false);
+  const [showSubModal, setShowSubModal]   = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [subConfig, setSubConfig]         = useState({ instructions: '', max_score: 20, deadline: '' });
+  const [url, setUrl]                     = useState(resource.external_url || '');
 
   const toggleVisibility = useMutation({
     mutationFn: () => api.patch(`/teacher/resources/${resource.id}/visibility`),
@@ -80,8 +81,8 @@ function ResourceCard({ resource, courseId, onPreview }) {
   const enableSubmission = useMutation({
     mutationFn: () => api.post(`/teacher/resources/${resource.id}/file_exercise`, {
       instructions: subConfig.instructions || null,
-      max_score: Number(subConfig.max_score) || 20,
-      deadline: subConfig.deadline || null,
+      max_score:    Number(subConfig.max_score) || 20,
+      deadline:     subConfig.deadline || null,
     }),
     onSuccess: () => {
       qc.invalidateQueries(['teacher-course', courseId]);
@@ -125,11 +126,8 @@ function ResourceCard({ resource, courseId, onPreview }) {
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-100 p-4">
       <div className="flex items-start justify-between gap-3">
-        {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <h3 className="font-medium text-gray-800 truncate">{resource.title}</h3>
-          </div>
+          <h3 className="font-medium text-gray-800 truncate">{resource.title}</h3>
           <div className="flex items-center gap-2 flex-wrap mt-1">
             {resource.file_type && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500">
@@ -141,8 +139,8 @@ function ResourceCard({ resource, courseId, onPreview }) {
                 {resource.is_visible ? 'Visible' : 'Masqué'}
               </span>
             )}
+            {resource.file_name && <span className="text-xs text-gray-400">{resource.file_name}</span>}
           </div>
-          {resource.file_name && <p className="text-xs text-gray-400 mt-1">{resource.file_name}</p>}
           {resource.external_url && (
             <a href={resource.external_url} target="_blank" rel="noreferrer"
               className="text-xs text-blue-600 hover:underline mt-1 inline-flex items-center gap-1">
@@ -153,7 +151,6 @@ function ResourceCard({ resource, courseId, onPreview }) {
           {isEmpty && <p className="text-xs text-gray-400 mt-1 italic">Aucun contenu</p>}
         </div>
 
-        {/* Buttons */}
         <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
           {!isEmpty && VIEWABLE_TYPES.includes(resource.file_type) && (
             <button onClick={() => onPreview(resource)} title="Prévisualiser"
@@ -161,7 +158,6 @@ function ResourceCard({ resource, courseId, onPreview }) {
               <PlayCircle size={16} />
             </button>
           )}
-
           {!isEmpty && (
             <button onClick={() => toggleVisibility.mutate()}
               title={resource.is_visible ? 'Masquer' : 'Rendre visible'}
@@ -169,23 +165,19 @@ function ResourceCard({ resource, courseId, onPreview }) {
               {resource.is_visible ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
           )}
-
           <label title="Uploader un fichier"
             className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition">
             {uploading ? <span className="text-xs px-1">…</span> : <Upload size={16} />}
             <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
           </label>
-
           <button title="Ajouter un lien URL" onClick={() => setShowUrlModal(true)}
             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition">
             <ExternalLink size={16} />
           </button>
-
           <button title="Changer le type d'exercice interactif" onClick={() => setShowTypeModal(true)}
             className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
             <Zap size={16} />
           </button>
-
           {resource.file_type === 'file_upload' && (
             <>
               <Link title="Modifier l'énoncé" to={`/teacher/resources/${resource.id}/exercise-editor`}
@@ -198,7 +190,6 @@ function ResourceCard({ resource, courseId, onPreview }) {
               </Link>
             </>
           )}
-
           {confirmDelete ? (
             <div className="flex items-center gap-1 ml-1">
               <button onClick={() => deleteResource.mutate()} disabled={deleteResource.isPending}
@@ -206,9 +197,7 @@ function ResourceCard({ resource, courseId, onPreview }) {
                 Supprimer
               </button>
               <button onClick={() => setConfirmDelete(false)}
-                className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
-                Non
-              </button>
+                className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">Non</button>
             </div>
           ) : (
             <button onClick={() => setConfirmDelete(true)} title="Supprimer"
@@ -236,46 +225,30 @@ function ResourceCard({ resource, courseId, onPreview }) {
         </div>
       )}
 
-      {/* Exercise type picker (reconfiguration) */}
+      {/* Exercise type reconfiguration modal */}
       {showTypeModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
             <h3 className="font-semibold mb-1">Type d'exercice interactif</h3>
             <p className="text-sm text-gray-500 mb-5">Choisissez le format pour « {resource.title} »</p>
             <div className="grid gap-3">
-              <button
-                onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/qcm`); }}
-                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left"
-              >
+              <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/qcm`); }}
+                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left">
                 <CheckSquare size={20} className="text-amber-500 shrink-0" />
-                <div>
-                  <p className="font-medium text-gray-800">QCM</p>
-                  <p className="text-xs text-gray-500">Questions à choix multiples, corrigées automatiquement</p>
-                </div>
+                <div><p className="font-medium text-gray-800">QCM</p><p className="text-xs text-gray-500">Questions à choix multiples</p></div>
               </button>
-              <button
-                onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/dragdrop`); }}
-                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left"
-              >
+              <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/dragdrop`); }}
+                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left">
                 <GripVertical size={20} className="text-purple-500 shrink-0" />
-                <div>
-                  <p className="font-medium text-gray-800">Glisser-Déposer</p>
-                  <p className="text-xs text-gray-500">Associer des éléments par glisser-déposer</p>
-                </div>
+                <div><p className="font-medium text-gray-800">Glisser-Déposer</p><p className="text-xs text-gray-500">Associer des éléments</p></div>
               </button>
-              <button
-                onClick={() => { setShowTypeModal(false); setShowSubModal(true); }}
-                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left"
-              >
+              <button onClick={() => { setShowTypeModal(false); setShowSubModal(true); }}
+                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left">
                 <FileUp size={20} className="text-emerald-500 shrink-0" />
-                <div>
-                  <p className="font-medium text-gray-800">Remise de fichier</p>
-                  <p className="text-xs text-gray-500">Les élèves déposent un fichier ou du texte</p>
-                </div>
+                <div><p className="font-medium text-gray-800">Remise de fichier</p><p className="text-xs text-gray-500">Les élèves déposent un fichier</p></div>
               </button>
             </div>
-            <button onClick={() => setShowTypeModal(false)}
-              className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 text-center py-1">Annuler</button>
+            <button onClick={() => setShowTypeModal(false)} className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 text-center py-1">Annuler</button>
           </div>
         </div>
       )}
@@ -289,10 +262,8 @@ function ResourceCard({ resource, courseId, onPreview }) {
             <div className="space-y-3">
               <div>
                 <label className="text-sm text-gray-600 mb-1 block">Consignes (optionnel)</label>
-                <textarea value={subConfig.instructions}
-                  onChange={e => setSubConfig({ ...subConfig, instructions: e.target.value })}
-                  rows={3}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                <textarea value={subConfig.instructions} onChange={e => setSubConfig({ ...subConfig, instructions: e.target.value })}
+                  rows={3} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Décrivez ce que les élèves doivent remettre…" />
               </div>
               <div className="flex gap-4">
@@ -310,8 +281,7 @@ function ResourceCard({ resource, courseId, onPreview }) {
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
-                <button onClick={() => setShowSubModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
+                <button onClick={() => setShowSubModal(false)} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
                 <button onClick={() => enableSubmission.mutate()} disabled={enableSubmission.isPending}
                   className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60">
                   {enableSubmission.isPending ? 'Activation…' : 'Activer'}
@@ -330,51 +300,36 @@ function ResourceCard({ resource, courseId, onPreview }) {
 function TypeGroup({ type, resources, courseId, onPreview, onAdd }) {
   const [open, setOpen] = useState(resources.length > 0);
   const style = TYPE_STYLE[type] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
-  const Icon = TYPE_ICON_MAP[type] || FileText;
+  const Icon  = TYPE_ICON_MAP[type] || FileText;
 
   return (
-    <div className={`bg-white rounded-xl shadow-sm border ${style.border} overflow-hidden`}>
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-4 cursor-pointer select-none hover:bg-gray-50 transition"
-        onClick={() => setOpen(o => !o)}
-      >
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${style.bg}`}>
-            <Icon size={16} className={style.text} />
+    <div className={`rounded-xl border ${style.border} overflow-hidden`}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-white/60 transition bg-white/30"
+        onClick={() => setOpen(o => !o)}>
+        <div className="flex items-center gap-2">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${style.bg}`}>
+            <Icon size={14} className={style.text} />
           </div>
-          <span className="font-semibold text-gray-800">{TYPE_LABELS[type]}</span>
+          <span className="font-medium text-gray-700 text-sm">{TYPE_LABELS[type]}</span>
           {resources.length > 0 && (
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-              {resources.length}
-            </span>
+            <span className="text-xs bg-white/80 text-gray-400 border border-gray-200 px-1.5 py-0.5 rounded-full">{resources.length}</span>
           )}
         </div>
-
         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-          <button
-            onClick={() => onAdd(type)}
-            className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition ${style.bg} ${style.text} hover:opacity-80`}
-          >
-            <Plus size={14} /> Ajouter
+          <button onClick={() => onAdd(type)}
+            className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg transition ${style.bg} ${style.text} hover:opacity-80`}>
+            <Plus size={13} /> Ajouter
           </button>
-          <span className="text-gray-300 ml-1">
-            {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </span>
+          <span className="text-gray-300">{open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</span>
         </div>
       </div>
 
-      {/* Content */}
       {open && (
-        <div className="px-5 pb-5 space-y-3 border-t border-gray-100 pt-4">
+        <div className="px-4 pb-4 space-y-2 border-t border-gray-100 pt-3 bg-white/20">
           {resources.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">
-              Aucune ressource — cliquez sur «&nbsp;Ajouter&nbsp;» pour en créer une.
-            </p>
+            <p className="text-xs text-gray-400 italic">Aucune ressource — cliquez sur «&nbsp;Ajouter&nbsp;»</p>
           ) : (
-            resources.map(r => (
-              <ResourceCard key={r.id} resource={r} courseId={courseId} onPreview={onPreview} />
-            ))
+            resources.map(r => <ResourceCard key={r.id} resource={r} courseId={courseId} onPreview={onPreview} />)
           )}
         </div>
       )}
@@ -384,7 +339,7 @@ function TypeGroup({ type, resources, courseId, onPreview, onAdd }) {
 
 /* ─── AddResourceModal ──────────────────────────────────────────────────── */
 
-function AddResourceModal({ type, courseId, onClose }) {
+function AddResourceModal({ type, chapterId, courseId, onClose }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const isInteractive = INTERACTIVE_TYPES.includes(type);
@@ -392,18 +347,17 @@ function AddResourceModal({ type, courseId, onClose }) {
   const [title, setTitle]     = useState(TYPE_LABELS[type] || '');
   const [subConfig, setSubConfig] = useState({ instructions: '', max_score: 20, deadline: '' });
   const [pendingSubId, setPendingSubId] = useState(null);
-
   const style = TYPE_STYLE[type] || { bg: 'bg-gray-50', text: 'text-gray-600' };
 
   const createResource = useMutation({
-    mutationFn: () => api.post(`/teacher/courses/${courseId}/resources`, { type, title }),
+    mutationFn: () => api.post(`/teacher/chapters/${chapterId}/resources`, { type, title }),
   });
 
   const enableSubmission = useMutation({
     mutationFn: (id) => api.post(`/teacher/resources/${id}/file_exercise`, {
       instructions: subConfig.instructions || null,
-      max_score: Number(subConfig.max_score) || 20,
-      deadline: subConfig.deadline || null,
+      max_score:    Number(subConfig.max_score) || 20,
+      deadline:     subConfig.deadline || null,
     }),
     onSuccess: () => {
       qc.invalidateQueries(['teacher-course', courseId]);
@@ -416,26 +370,19 @@ function AddResourceModal({ type, courseId, onClose }) {
   const handleConfirm = async () => {
     if (!title.trim()) return;
     try {
-      const res = await createResource.mutateAsync();
+      const res   = await createResource.mutateAsync();
       const newId = res.data.resource.id;
       qc.invalidateQueries(['teacher-course', courseId]);
-
-      if (format === 'qcm') {
-        navigate(`/teacher/resources/${newId}/qcm`);
-      } else if (format === 'dragdrop') {
-        navigate(`/teacher/resources/${newId}/dragdrop`);
-      } else if (format === 'file_upload') {
-        setPendingSubId(newId);
-      } else {
-        toast.success('Ressource ajoutée');
-        onClose();
-      }
+      if (format === 'qcm')         { navigate(`/teacher/resources/${newId}/qcm`); }
+      else if (format === 'dragdrop') { navigate(`/teacher/resources/${newId}/dragdrop`); }
+      else if (format === 'file_upload') { setPendingSubId(newId); }
+      else { toast.success('Ressource ajoutée'); onClose(); }
     } catch {
       toast.error("Erreur lors de l'ajout");
     }
   };
 
-  // ── Submission config step ────────────────────────────────────────────────
+  /* Submission config step */
   if (pendingSubId) {
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -445,10 +392,8 @@ function AddResourceModal({ type, courseId, onClose }) {
           <div className="space-y-3">
             <div>
               <label className="text-sm text-gray-600 mb-1 block">Consignes (optionnel)</label>
-              <textarea value={subConfig.instructions}
-                onChange={e => setSubConfig({ ...subConfig, instructions: e.target.value })}
-                rows={3}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              <textarea value={subConfig.instructions} onChange={e => setSubConfig({ ...subConfig, instructions: e.target.value })}
+                rows={3} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Décrivez ce que les élèves doivent remettre…" />
             </div>
             <div className="flex gap-4">
@@ -466,10 +411,8 @@ function AddResourceModal({ type, courseId, onClose }) {
               </div>
             </div>
             <div className="flex gap-3 pt-1">
-              <button onClick={onClose}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Passer</button>
-              <button onClick={() => enableSubmission.mutate(pendingSubId)}
-                disabled={enableSubmission.isPending}
+              <button onClick={onClose} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Passer</button>
+              <button onClick={() => enableSubmission.mutate(pendingSubId)} disabled={enableSubmission.isPending}
                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60">
                 {enableSubmission.isPending ? 'Activation…' : 'Activer'}
               </button>
@@ -480,50 +423,34 @@ function AddResourceModal({ type, courseId, onClose }) {
     );
   }
 
-  // ── Format picker step (interactive types) ────────────────────────────────
+  /* Format picker step */
   if (isInteractive && format === null) {
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>
-              {TYPE_LABELS[type]}
-            </span>
-          </div>
-          <h3 className="font-semibold mb-1">Quel type de contenu ?</h3>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>{TYPE_LABELS[type]}</span>
+          <h3 className="font-semibold mt-2 mb-1">Quel type de contenu ?</h3>
           <p className="text-sm text-gray-500 mb-5">Choisissez le format de cette ressource.</p>
           <div className="grid gap-3">
             <button onClick={() => setFormat('file')}
               className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl transition text-left">
               <FileText size={20} className="text-indigo-500 shrink-0" />
-              <div>
-                <p className="font-medium text-gray-800">Fichier / Document</p>
-                <p className="text-xs text-gray-500">PDF, présentation, vidéo, lien…</p>
-              </div>
+              <div><p className="font-medium text-gray-800">Fichier / Document</p><p className="text-xs text-gray-500">PDF, présentation, vidéo, lien…</p></div>
             </button>
             <button onClick={() => setFormat('qcm')}
               className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left">
               <CheckSquare size={20} className="text-amber-500 shrink-0" />
-              <div>
-                <p className="font-medium text-gray-800">QCM</p>
-                <p className="text-xs text-gray-500">Questions à choix multiples, corrigées automatiquement</p>
-              </div>
+              <div><p className="font-medium text-gray-800">QCM</p><p className="text-xs text-gray-500">Questions à choix multiples, corrigées automatiquement</p></div>
             </button>
             <button onClick={() => setFormat('dragdrop')}
               className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left">
               <GripVertical size={20} className="text-purple-500 shrink-0" />
-              <div>
-                <p className="font-medium text-gray-800">Glisser-Déposer</p>
-                <p className="text-xs text-gray-500">Associer des éléments par glisser-déposer</p>
-              </div>
+              <div><p className="font-medium text-gray-800">Glisser-Déposer</p><p className="text-xs text-gray-500">Associer des éléments par glisser-déposer</p></div>
             </button>
             <button onClick={() => setFormat('file_upload')}
               className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left">
               <FileUp size={20} className="text-emerald-500 shrink-0" />
-              <div>
-                <p className="font-medium text-gray-800">Remise de fichier</p>
-                <p className="text-xs text-gray-500">Les élèves déposent un fichier ou du texte</p>
-              </div>
+              <div><p className="font-medium text-gray-800">Remise de fichier</p><p className="text-xs text-gray-500">Les élèves déposent un fichier ou du texte</p></div>
             </button>
           </div>
           <button onClick={onClose} className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 text-center py-1">Annuler</button>
@@ -532,14 +459,12 @@ function AddResourceModal({ type, courseId, onClose }) {
     );
   }
 
-  // ── Title input step ──────────────────────────────────────────────────────
+  /* Title input step */
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center gap-2 mb-4">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>
-            {TYPE_LABELS[type]}
-          </span>
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>{TYPE_LABELS[type]}</span>
           {format && format !== 'file' && (
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
               {format === 'qcm' ? 'QCM' : format === 'dragdrop' ? 'Glisser-Déposer' : 'Remise de fichier'}
@@ -547,35 +472,127 @@ function AddResourceModal({ type, courseId, onClose }) {
           )}
         </div>
         <h3 className="font-semibold mb-4">Nom de la ressource</h3>
-        <input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleConfirm()}
+        <input value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleConfirm()}
           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
-          placeholder="Titre de la ressource"
-          autoFocus
-        />
+          placeholder="Titre de la ressource" autoFocus />
         <div className="flex gap-3">
-          {isInteractive ? (
-            <button onClick={() => setFormat(null)}
-              className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
-              ← Retour
-            </button>
-          ) : (
-            <button onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
-              Annuler
-            </button>
-          )}
-          <button
-            onClick={handleConfirm}
-            disabled={!title.trim() || createResource.isPending}
-            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60"
-          >
-            {createResource.isPending ? 'Création…' : format === 'qcm' ? 'Créer et ouvrir le QCM' : format === 'dragdrop' ? 'Créer et ouvrir le glisser-déposer' : 'Ajouter'}
+          {isInteractive
+            ? <button onClick={() => setFormat(null)} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">← Retour</button>
+            : <button onClick={onClose}               className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
+          }
+          <button onClick={handleConfirm} disabled={!title.trim() || createResource.isPending}
+            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60">
+            {createResource.isPending ? 'Création…'
+              : format === 'qcm'      ? 'Créer et ouvrir le QCM'
+              : format === 'dragdrop' ? 'Créer et ouvrir le glisser-déposer'
+              : 'Ajouter'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── ChapterSection ─────────────────────────────────────────────────────── */
+
+function ChapterSection({ chapter, courseId, onPreview }) {
+  const qc = useQueryClient();
+  const [open, setOpen]           = useState(true);
+  const [editing, setEditing]     = useState(false);
+  const [title, setTitle]         = useState(chapter.title);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [addState, setAddState]   = useState(null); // { type } | null
+
+  const updateChapter = useMutation({
+    mutationFn: () => api.put(`/teacher/chapters/${chapter.id}`, { title }),
+    onSuccess: () => { qc.invalidateQueries(['teacher-course', courseId]); setEditing(false); toast.success('Chapitre renommé'); },
+  });
+
+  const deleteChapter = useMutation({
+    mutationFn: () => api.delete(`/teacher/chapters/${chapter.id}`),
+    onSuccess: () => { qc.invalidateQueries(['teacher-course', courseId]); toast.success('Chapitre supprimé'); },
+  });
+
+  const byType = Object.fromEntries(
+    Object.keys(TYPE_LABELS).map(type => [
+      type,
+      (chapter.resources || []).filter(r => r.type === type),
+    ])
+  );
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden">
+      {/* Chapter header */}
+      <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-50 to-white border-b border-indigo-100">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
+            <BookMarked size={16} className="text-white" />
+          </div>
+          {editing ? (
+            <div className="flex items-center gap-2 flex-1">
+              <input value={title} onChange={e => setTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') updateChapter.mutate(); if (e.key === 'Escape') setEditing(false); }}
+                className="flex-1 border rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                autoFocus />
+              <button onClick={() => updateChapter.mutate()} disabled={!title.trim()}
+                className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm disabled:opacity-60">OK</button>
+              <button onClick={() => { setEditing(false); setTitle(chapter.title); }} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="font-bold text-gray-800 truncate">{chapter.title}</h2>
+              <button onClick={() => setEditing(true)} className="p-1 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 shrink-0">
+                <Pencil size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-3">
+          {confirmDel ? (
+            <>
+              <button onClick={() => deleteChapter.mutate()} disabled={deleteChapter.isPending}
+                className="px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-60">
+                Supprimer tout
+              </button>
+              <button onClick={() => setConfirmDel(false)} className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">Non</button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmDel(true)} title="Supprimer le chapitre"
+              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button onClick={() => setOpen(o => !o)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition">
+            {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Chapter content: 8 type groups */}
+      {open && (
+        <div className="p-5 grid gap-3">
+          {Object.keys(TYPE_LABELS).map(type => (
+            <TypeGroup
+              key={type}
+              type={type}
+              resources={byType[type]}
+              courseId={courseId}
+              onPreview={onPreview}
+              onAdd={(t) => setAddState({ type: t })}
+            />
+          ))}
+        </div>
+      )}
+
+      {addState && (
+        <AddResourceModal
+          type={addState.type}
+          chapterId={chapter.id}
+          courseId={courseId}
+          onClose={() => setAddState(null)}
+        />
+      )}
     </div>
   );
 }
@@ -585,10 +602,11 @@ function AddResourceModal({ type, courseId, onClose }) {
 export default function CourseDetailPage() {
   const { courseId } = useParams();
   const qc = useQueryClient();
-  const [editName, setEditName]       = useState(false);
-  const [name, setName]               = useState('');
+  const [editName, setEditName]           = useState(false);
+  const [name, setName]                   = useState('');
   const [viewingResource, setViewingResource] = useState(null);
-  const [addingType, setAddingType]   = useState(null);
+  const [showAddChapter, setShowAddChapter]  = useState(false);
+  const [chapterTitle, setChapterTitle]      = useState('');
 
   const { data } = useQuery({
     queryKey: ['teacher-course', courseId],
@@ -600,16 +618,20 @@ export default function CourseDetailPage() {
     onSuccess: () => { qc.invalidateQueries(['teacher-course', courseId]); setEditName(false); toast.success('Renommé'); },
   });
 
-  const course    = data?.course;
-  const resources = course?.resources || [];
+  const addChapter = useMutation({
+    mutationFn: () => api.post(`/teacher/courses/${courseId}/chapters`, { title: chapterTitle }),
+    onSuccess: () => {
+      qc.invalidateQueries(['teacher-course', courseId]);
+      setShowAddChapter(false);
+      setChapterTitle('');
+      toast.success('Chapitre ajouté');
+    },
+    onError: () => toast.error("Erreur lors de l'ajout"),
+  });
 
-  // Group by type
-  const byType = Object.fromEntries(
-    Object.keys(TYPE_LABELS).map(type => [
-      type,
-      resources.filter(r => r.type === type),
-    ])
-  );
+  const course   = data?.course;
+  const chapters = course?.chapters || [];
+  const rootRes  = course?.root_resources || [];
 
   return (
     <TeacherLayout>
@@ -623,8 +645,7 @@ export default function CourseDetailPage() {
             {editName ? (
               <div className="flex items-center gap-2">
                 <input value={name} onChange={e => setName(e.target.value)}
-                  className="border rounded-lg px-3 py-1.5 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus />
+                  className="border rounded-lg px-3 py-1.5 text-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
                 <button onClick={() => updateName.mutate()} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm">OK</button>
                 <button onClick={() => setEditName(false)} className="text-gray-400 hover:text-gray-600">✕</button>
               </div>
@@ -638,39 +659,80 @@ export default function CourseDetailPage() {
               </>
             )}
           </div>
-          <Link
-            to={`/teacher/courses/${courseId}/forum`}
-            className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-100 text-sm font-medium transition"
-          >
-            <MessageCircle size={16} /> Forum
-          </Link>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowAddChapter(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition">
+              <Plus size={16} /> Ajouter un chapitre
+            </button>
+            <Link to={`/teacher/courses/${courseId}/forum`}
+              className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-100 text-sm font-medium transition">
+              <MessageCircle size={16} /> Forum
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Type groups */}
-      <div className="grid gap-4">
-        {Object.keys(TYPE_LABELS).map(type => (
-          <TypeGroup
-            key={type}
-            type={type}
-            resources={byType[type]}
-            courseId={courseId}
-            onPreview={setViewingResource}
-            onAdd={setAddingType}
-          />
+      {/* Chapters */}
+      <div className="grid gap-5">
+        {chapters.map(ch => (
+          <ChapterSection key={ch.id} chapter={ch} courseId={courseId} onPreview={setViewingResource} />
         ))}
+
+        {/* Legacy root resources (no chapter) */}
+        {rootRes.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
+              <span className="font-semibold text-gray-600 text-sm">Ressources sans chapitre</span>
+            </div>
+            <div className="p-5 grid gap-3">
+              {Object.keys(TYPE_LABELS).map(type => {
+                const res = rootRes.filter(r => r.type === type);
+                if (res.length === 0) return null;
+                return (
+                  <TypeGroup key={type} type={type} resources={res} courseId={courseId}
+                    onPreview={setViewingResource} onAdd={() => {}} />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {chapters.length === 0 && rootRes.length === 0 && (
+          <div className="text-center text-gray-400 py-16 bg-white rounded-2xl shadow-sm border border-dashed border-gray-200">
+            <BookMarked size={36} className="mx-auto mb-3 opacity-20" />
+            <p className="mb-4 text-sm">Ce cours n'a pas encore de chapitre.</p>
+            <button onClick={() => setShowAddChapter(true)}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">
+              <Plus size={16} /> Créer le premier chapitre
+            </button>
+          </div>
+        )}
       </div>
 
       {viewingResource && (
         <ResourceViewer resource={viewingResource} onClose={() => setViewingResource(null)} />
       )}
 
-      {addingType && (
-        <AddResourceModal
-          type={addingType}
-          courseId={courseId}
-          onClose={() => setAddingType(null)}
-        />
+      {/* Add chapter modal */}
+      {showAddChapter && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="font-semibold mb-4">Nouveau chapitre</h3>
+            <input value={chapterTitle} onChange={e => setChapterTitle(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && chapterTitle.trim() && addChapter.mutate()}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+              placeholder="Ex: Chapitre 1 — Introduction aux réseaux" autoFocus />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowAddChapter(false); setChapterTitle(''); }}
+                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Annuler</button>
+              <button onClick={() => addChapter.mutate()} disabled={!chapterTitle.trim() || addChapter.isPending}
+                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60">
+                {addChapter.isPending ? 'Création…' : 'Créer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </TeacherLayout>
   );

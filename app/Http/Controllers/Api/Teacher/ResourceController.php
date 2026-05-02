@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\Chapter;
 use App\Models\Course;
 use App\Models\Resource;
 use Illuminate\Http\Request;
@@ -29,6 +30,25 @@ class ResourceController extends Controller
         $data['order'] = $course->resources()->max('order') + 1;
 
         $resource = Resource::create($data);
+
+        return response()->json(['resource' => $resource], 201);
+    }
+
+    public function storeForChapter(Request $request, Chapter $chapter)
+    {
+        $data = $request->validate([
+            'type'  => 'required|in:' . implode(',', Resource::TYPES),
+            'title' => 'required|string|max:200',
+        ]);
+
+        $resource = Resource::create([
+            'course_id'  => $chapter->course_id,
+            'chapter_id' => $chapter->id,
+            'type'       => $data['type'],
+            'title'      => $data['title'],
+            'is_visible' => false,
+            'order'      => $chapter->resources()->max('order') + 1,
+        ]);
 
         return response()->json(['resource' => $resource], 201);
     }

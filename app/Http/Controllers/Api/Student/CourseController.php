@@ -52,7 +52,11 @@ class CourseController extends Controller
             return response()->json(['message' => 'Not enrolled.'], 403);
         }
 
-        $course->load(['resources' => fn($q) => $q->where('is_visible', true), 'section.schoolClass']);
+        $course->load([
+            'chapters' => fn($q) => $q->orderBy('order')->orderBy('id'),
+            'chapters.resources' => fn($q) => $q->where('is_visible', true)->orderBy('order'),
+            'section.schoolClass',
+        ]);
 
         return response()->json(['course' => $course]);
     }

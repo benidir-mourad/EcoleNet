@@ -22,6 +22,7 @@ class Resource extends Model
 
     protected $fillable = [
         'course_id',
+        'chapter_id',
         'type',
         'file_type',
         'title',
@@ -41,6 +42,11 @@ class Resource extends Model
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function chapter()
+    {
+        return $this->belongsTo(Chapter::class);
     }
 
     public function exercise()

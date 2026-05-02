@@ -36,7 +36,13 @@ class CourseController extends Controller
 
     public function show(Course $course)
     {
-        return response()->json(['course' => $course->load('resources', 'section.schoolClass')]);
+        return response()->json([
+            'course' => $course->load([
+                'chapters.resources',
+                'rootResources',
+                'section.schoolClass',
+            ]),
+        ]);
     }
 
     public function update(Request $request, Course $course)

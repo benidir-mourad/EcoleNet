@@ -48,10 +48,11 @@ const FILE_ICONS = {
   pdf: FileText, pptx: FileText, docx: FileText, xlsx: FileText, image: FileText,
   video_upload: Video, video_youtube: Video, link: LinkIcon,
   qcm: CheckSquare, drag_drop: GripVertical, excel_interactive: CheckSquare, file_upload: Upload,
+  fill_blanks: FileText, ordering: CheckSquare, code_editor: Monitor, truth_table: CheckCircle,
 };
 
 const VIEWABLE    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
-const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload'];
+const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload', 'fill_blanks', 'ordering', 'code_editor', 'truth_table'];
 
 /* ─── ResourceRow ────────────────────────────────────────────────────────── */
 
@@ -96,6 +97,30 @@ function ResourceRow({ resource, onView, onMark }) {
           <Link to={`/student/resources/${resource.id}/exercise`} onClick={() => onMark(resource.id)}
             className="flex items-center gap-1.5 bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-amber-700">
             <Upload size={13} /> Remettre
+          </Link>
+        )}
+        {resource.file_type === 'fill_blanks' && (
+          <Link to={`/student/resources/${resource.id}/fill-blanks`} onClick={() => onMark(resource.id)}
+            className="flex items-center gap-1.5 bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-sky-700">
+            <FileText size={13} /> Exercice
+          </Link>
+        )}
+        {resource.file_type === 'ordering' && (
+          <Link to={`/student/resources/${resource.id}/ordering`} onClick={() => onMark(resource.id)}
+            className="flex items-center gap-1.5 bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-orange-600">
+            <CheckSquare size={13} /> Ordonner
+          </Link>
+        )}
+        {resource.file_type === 'code_editor' && (
+          <Link to={`/student/resources/${resource.id}/code-editor`} onClick={() => onMark(resource.id)}
+            className="flex items-center gap-1.5 bg-violet-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-violet-700">
+            <Monitor size={13} /> Coder
+          </Link>
+        )}
+        {resource.file_type === 'truth_table' && (
+          <Link to={`/student/resources/${resource.id}/truth-table`} onClick={() => onMark(resource.id)}
+            className="flex items-center gap-1.5 bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-teal-700">
+            <CheckCircle size={13} /> Table
           </Link>
         )}
         {isEmpty && <span className="text-xs text-gray-300 italic">Non disponible</span>}

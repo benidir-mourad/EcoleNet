@@ -228,24 +228,44 @@ function ResourceCard({ resource, courseId, onPreview }) {
       {/* Exercise type reconfiguration modal */}
       {showTypeModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="font-semibold mb-1">Type d'exercice interactif</h3>
-            <p className="text-sm text-gray-500 mb-5">Choisissez le format pour « {resource.title} »</p>
-            <div className="grid gap-3">
+            <p className="text-sm text-gray-500 mb-4">Choisissez le format pour « {resource.title} »</p>
+            <div className="grid gap-2.5">
               <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/qcm`); }}
-                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left">
-                <CheckSquare size={20} className="text-amber-500 shrink-0" />
-                <div><p className="font-medium text-gray-800">QCM</p><p className="text-xs text-gray-500">Questions à choix multiples</p></div>
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left">
+                <CheckSquare size={18} className="text-amber-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">QCM</p><p className="text-xs text-gray-500">Questions à choix multiples</p></div>
               </button>
               <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/dragdrop`); }}
-                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left">
-                <GripVertical size={20} className="text-purple-500 shrink-0" />
-                <div><p className="font-medium text-gray-800">Glisser-Déposer</p><p className="text-xs text-gray-500">Associer des éléments</p></div>
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left">
+                <GripVertical size={18} className="text-purple-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">Glisser-Déposer</p><p className="text-xs text-gray-500">Associer des éléments</p></div>
+              </button>
+              <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/fill-blanks`); }}
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-sky-300 hover:bg-sky-50 rounded-xl transition text-left">
+                <FileText size={18} className="text-sky-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">Texte à trous</p><p className="text-xs text-gray-500">Compléter des mots manquants</p></div>
+              </button>
+              <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/ordering`); }}
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-orange-300 hover:bg-orange-50 rounded-xl transition text-left">
+                <ChevronDown size={18} className="text-orange-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">Ordonnancement</p><p className="text-xs text-gray-500">Remettre dans le bon ordre</p></div>
+              </button>
+              <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/code-editor`); }}
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-violet-300 hover:bg-violet-50 rounded-xl transition text-left">
+                <Monitor size={18} className="text-violet-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">Éditeur de code</p><p className="text-xs text-gray-500">JS, HTML, CSS, PHP, SQL, Python…</p></div>
+              </button>
+              <button onClick={() => { setShowTypeModal(false); navigate(`/teacher/resources/${resource.id}/truth-table`); }}
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-teal-300 hover:bg-teal-50 rounded-xl transition text-left">
+                <CheckCircle size={18} className="text-teal-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">Table de vérité</p><p className="text-xs text-gray-500">Portes logiques AND/OR/NOT…</p></div>
               </button>
               <button onClick={() => { setShowTypeModal(false); setShowSubModal(true); }}
-                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left">
-                <FileUp size={20} className="text-emerald-500 shrink-0" />
-                <div><p className="font-medium text-gray-800">Remise de fichier</p><p className="text-xs text-gray-500">Les élèves déposent un fichier</p></div>
+                className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left">
+                <FileUp size={18} className="text-emerald-500 shrink-0" />
+                <div><p className="font-medium text-gray-800 text-sm">Remise de fichier</p><p className="text-xs text-gray-500">Les élèves déposent un fichier</p></div>
               </button>
             </div>
             <button onClick={() => setShowTypeModal(false)} className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 text-center py-1">Annuler</button>
@@ -373,8 +393,12 @@ function AddResourceModal({ type, chapterId, courseId, onClose }) {
       const res   = await createResource.mutateAsync();
       const newId = res.data.resource.id;
       qc.invalidateQueries(['teacher-course', courseId]);
-      if (format === 'qcm')         { navigate(`/teacher/resources/${newId}/qcm`); }
-      else if (format === 'dragdrop') { navigate(`/teacher/resources/${newId}/dragdrop`); }
+      if (format === 'qcm')          { navigate(`/teacher/resources/${newId}/qcm`); }
+      else if (format === 'dragdrop')    { navigate(`/teacher/resources/${newId}/dragdrop`); }
+      else if (format === 'fill_blanks') { navigate(`/teacher/resources/${newId}/fill-blanks`); }
+      else if (format === 'ordering')    { navigate(`/teacher/resources/${newId}/ordering`); }
+      else if (format === 'code_editor') { navigate(`/teacher/resources/${newId}/code-editor`); }
+      else if (format === 'truth_table') { navigate(`/teacher/resources/${newId}/truth-table`); }
       else if (format === 'file_upload') { setPendingSubId(newId); }
       else { toast.success('Ressource ajoutée'); onClose(); }
     } catch {
@@ -431,26 +455,46 @@ function AddResourceModal({ type, chapterId, courseId, onClose }) {
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>{TYPE_LABELS[type]}</span>
           <h3 className="font-semibold mt-2 mb-1">Quel type de contenu ?</h3>
           <p className="text-sm text-gray-500 mb-5">Choisissez le format de cette ressource.</p>
-          <div className="grid gap-3">
+          <div className="grid gap-2.5">
             <button onClick={() => setFormat('file')}
-              className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl transition text-left">
-              <FileText size={20} className="text-indigo-500 shrink-0" />
-              <div><p className="font-medium text-gray-800">Fichier / Document</p><p className="text-xs text-gray-500">PDF, présentation, vidéo, lien…</p></div>
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-indigo-300 hover:bg-indigo-50 rounded-xl transition text-left">
+              <FileText size={18} className="text-indigo-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Fichier / Document</p><p className="text-xs text-gray-500">PDF, présentation, vidéo, lien…</p></div>
             </button>
             <button onClick={() => setFormat('qcm')}
-              className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left">
-              <CheckSquare size={20} className="text-amber-500 shrink-0" />
-              <div><p className="font-medium text-gray-800">QCM</p><p className="text-xs text-gray-500">Questions à choix multiples, corrigées automatiquement</p></div>
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left">
+              <CheckSquare size={18} className="text-amber-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">QCM</p><p className="text-xs text-gray-500">Questions à choix multiples, auto-corrigées</p></div>
             </button>
             <button onClick={() => setFormat('dragdrop')}
-              className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left">
-              <GripVertical size={20} className="text-purple-500 shrink-0" />
-              <div><p className="font-medium text-gray-800">Glisser-Déposer</p><p className="text-xs text-gray-500">Associer des éléments par glisser-déposer</p></div>
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left">
+              <GripVertical size={18} className="text-purple-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Glisser-Déposer</p><p className="text-xs text-gray-500">Associer des éléments par glisser-déposer</p></div>
+            </button>
+            <button onClick={() => setFormat('fill_blanks')}
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-sky-300 hover:bg-sky-50 rounded-xl transition text-left">
+              <FileText size={18} className="text-sky-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Texte à trous</p><p className="text-xs text-gray-500">Compléter des mots manquants dans un texte</p></div>
+            </button>
+            <button onClick={() => setFormat('ordering')}
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-orange-300 hover:bg-orange-50 rounded-xl transition text-left">
+              <ChevronDown size={18} className="text-orange-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Ordonnancement</p><p className="text-xs text-gray-500">Remettre des lignes dans le bon ordre</p></div>
+            </button>
+            <button onClick={() => setFormat('code_editor')}
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-violet-300 hover:bg-violet-50 rounded-xl transition text-left">
+              <Monitor size={18} className="text-violet-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Éditeur de code</p><p className="text-xs text-gray-500">JS, HTML, CSS, PHP, SQL, Python…</p></div>
+            </button>
+            <button onClick={() => setFormat('truth_table')}
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-teal-300 hover:bg-teal-50 rounded-xl transition text-left">
+              <CheckCircle size={18} className="text-teal-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Table de vérité</p><p className="text-xs text-gray-500">Portes logiques AND/OR/NOT…</p></div>
             </button>
             <button onClick={() => setFormat('file_upload')}
-              className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left">
-              <FileUp size={20} className="text-emerald-500 shrink-0" />
-              <div><p className="font-medium text-gray-800">Remise de fichier</p><p className="text-xs text-gray-500">Les élèves déposent un fichier ou du texte</p></div>
+              className="flex items-center gap-3 p-3.5 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left">
+              <FileUp size={18} className="text-emerald-500 shrink-0" />
+              <div><p className="font-medium text-gray-800 text-sm">Remise de fichier</p><p className="text-xs text-gray-500">Les élèves déposent un fichier ou du texte</p></div>
             </button>
           </div>
           <button onClick={onClose} className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 text-center py-1">Annuler</button>
@@ -467,7 +511,9 @@ function AddResourceModal({ type, chapterId, courseId, onClose }) {
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>{TYPE_LABELS[type]}</span>
           {format && format !== 'file' && (
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-              {format === 'qcm' ? 'QCM' : format === 'dragdrop' ? 'Glisser-Déposer' : 'Remise de fichier'}
+              {{ qcm: 'QCM', dragdrop: 'Glisser-Déposer', fill_blanks: 'Texte à trous',
+                 ordering: 'Ordonnancement', code_editor: 'Éditeur de code',
+                 truth_table: 'Table de vérité', file_upload: 'Remise de fichier' }[format] || format}
             </span>
           )}
         </div>
@@ -483,8 +529,7 @@ function AddResourceModal({ type, chapterId, courseId, onClose }) {
           <button onClick={handleConfirm} disabled={!title.trim() || createResource.isPending}
             className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60">
             {createResource.isPending ? 'Création…'
-              : format === 'qcm'      ? 'Créer et ouvrir le QCM'
-              : format === 'dragdrop' ? 'Créer et ouvrir le glisser-déposer'
+              : ['qcm','dragdrop','fill_blanks','ordering','code_editor','truth_table'].includes(format) ? 'Créer et configurer'
               : 'Ajouter'}
           </button>
         </div>

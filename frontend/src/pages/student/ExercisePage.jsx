@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Upload, CheckCircle, Clock, FileText, X, ArrowLeft,
-  ChevronLeft, ChevronRight, BookOpen,
+  ChevronLeft, ChevronRight, BookOpen, Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -165,6 +165,22 @@ export default function ExercisePage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Fichier modèle à télécharger ─────────────── */}
+      {exercise?.template_file_name && (
+        <div className="bg-indigo-50 rounded-xl p-4 flex items-center justify-between border border-indigo-200 mb-6">
+          <div>
+            <p className="text-sm font-medium text-indigo-800">Fichier modèle à compléter</p>
+            <p className="text-xs text-indigo-600 mt-0.5">{exercise.template_file_name}</p>
+          </div>
+          <a
+            href={`${import.meta.env.VITE_API_URL?.replace('/api', '')}/storage/${exercise.template_file_path}`}
+            download
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
+            <Download size={14} /> Télécharger
+          </a>
         </div>
       )}
 

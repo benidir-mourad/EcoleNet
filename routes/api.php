@@ -63,6 +63,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('resources/{resource}/dragdrop',  [ExerciseController::class, 'getDragDrop']);
         Route::post('resources/{resource}/dragdrop', [ExerciseController::class, 'saveDragDrop']);
 
+        // Fill Blanks builder
+        Route::get('resources/{resource}/fill-blanks',  [ExerciseController::class, 'getFillBlanks']);
+        Route::post('resources/{resource}/fill-blanks', [ExerciseController::class, 'saveFillBlanks']);
+
+        // Ordering builder
+        Route::get('resources/{resource}/ordering',  [ExerciseController::class, 'getOrdering']);
+        Route::post('resources/{resource}/ordering', [ExerciseController::class, 'saveOrdering']);
+
+        // Code Editor builder
+        Route::get('resources/{resource}/code-editor',  [ExerciseController::class, 'getCodeEditor']);
+        Route::post('resources/{resource}/code-editor', [ExerciseController::class, 'saveCodeEditor']);
+
+        // Truth Table builder
+        Route::get('resources/{resource}/truth-table',  [ExerciseController::class, 'getTruthTable']);
+        Route::post('resources/{resource}/truth-table', [ExerciseController::class, 'saveTruthTable']);
+
+        // Template file upload (for file_upload exercises)
+        Route::post('resources/{resource}/template', [ExerciseController::class, 'uploadTemplate']);
+
         // Enrollments
         Route::get('enrollments/pending',                    [EnrollmentController::class, 'pending']);
         Route::patch('enrollments/{enrollment}/approve',     [EnrollmentController::class, 'approve']);
@@ -115,8 +134,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('resources/{resource}/qcm',          [QcmController::class, 'getQcm']);
 
         // Drag & Drop
-        Route::get('resources/{resource}/dragdrop',         [QcmController::class, 'getDragDrop']);
-        Route::post('resources/{resource}/dragdrop/attempt',[ExerciseController::class, 'attemptDragDrop']);
+        Route::get('resources/{resource}/dragdrop',          [QcmController::class, 'getDragDrop']);
+        Route::post('resources/{resource}/dragdrop/attempt', [ExerciseController::class, 'attemptDragDrop']);
+
+        // Fill Blanks
+        Route::get('resources/{resource}/fill-blanks',          [ExerciseController::class, 'getFillBlanks']);
+        Route::post('resources/{resource}/fill-blanks/attempt', [ExerciseController::class, 'attemptFillBlanks']);
+
+        // Ordering
+        Route::get('resources/{resource}/ordering',          [ExerciseController::class, 'getOrdering']);
+        Route::post('resources/{resource}/ordering/attempt', [ExerciseController::class, 'attemptOrdering']);
+
+        // Code Editor (submit as text via existing submit route)
+        Route::get('resources/{resource}/code-editor', [ExerciseController::class, 'getCodeEditor']);
+
+        // Truth Table
+        Route::get('resources/{resource}/truth-table',          [ExerciseController::class, 'getTruthTable']);
+        Route::post('resources/{resource}/truth-table/attempt', [ExerciseController::class, 'attemptTruthTable']);
 
         // Exercise submissions
         Route::post('resources/{resource}/submit',        [SubmissionController::class, 'storeForResource']);

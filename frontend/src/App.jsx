@@ -18,6 +18,10 @@ import TeacherForumPage from './pages/teacher/ForumPage';
 import DragDropBuilderPage from './pages/teacher/DragDropBuilderPage';
 import SubmissionsPage from './pages/teacher/SubmissionsPage';
 import ExerciseEditorPage from './pages/teacher/ExerciseEditorPage';
+import FillBlanksBuilderPage from './pages/teacher/FillBlanksBuilderPage';
+import OrderingBuilderPage from './pages/teacher/OrderingBuilderPage';
+import CodeEditorBuilderPage from './pages/teacher/CodeEditorBuilderPage';
+import TruthTableBuilderPage from './pages/teacher/TruthTableBuilderPage';
 
 import StudentDashboard from './pages/student/Dashboard';
 import CoursePage from './pages/student/CoursePage';
@@ -27,6 +31,10 @@ import StudentMessagesPage from './pages/student/MessagesPage';
 import StudentForumPage from './pages/student/ForumPage';
 import DragDropPage from './pages/student/DragDropPage';
 import ExercisePage from './pages/student/ExercisePage';
+import FillBlanksPage from './pages/student/FillBlanksPage';
+import OrderingPage from './pages/student/OrderingPage';
+import CodeEditorPage from './pages/student/CodeEditorPage';
+import TruthTablePage from './pages/student/TruthTablePage';
 
 import AdminDashboard from './pages/admin/Dashboard';
 
@@ -66,6 +74,10 @@ export default function App() {
           <Route path="/teacher/resources/:resourceId/dragdrop"     element={T(<DragDropBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/submissions"     element={T(<SubmissionsPage />)} />
           <Route path="/teacher/resources/:resourceId/exercise-editor" element={T(<ExerciseEditorPage />)} />
+          <Route path="/teacher/resources/:resourceId/fill-blanks"    element={T(<FillBlanksBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/ordering"       element={T(<OrderingBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/code-editor"    element={T(<CodeEditorBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/truth-table"    element={T(<TruthTableBuilderPage />)} />
 
           {/* Student */}
           <Route path="/student/dashboard"                        element={S(<StudentDashboard />)} />
@@ -73,7 +85,11 @@ export default function App() {
           <Route path="/student/courses/:courseId/forum"          element={S(<StudentForumPage />)} />
           <Route path="/student/resources/:resourceId/qcm"          element={S(<QcmPage />)} />
           <Route path="/student/resources/:resourceId/dragdrop"     element={S(<DragDropPage />)} />
-          <Route path="/student/resources/:resourceId/exercise"     element={S(<ExercisePage />)} />
+          <Route path="/student/resources/:resourceId/exercise"      element={S(<ExercisePage />)} />
+          <Route path="/student/resources/:resourceId/fill-blanks"  element={S(<FillBlanksPage />)} />
+          <Route path="/student/resources/:resourceId/ordering"     element={S(<OrderingPage />)} />
+          <Route path="/student/resources/:resourceId/code-editor"  element={S(<CodeEditorPage />)} />
+          <Route path="/student/resources/:resourceId/truth-table"  element={S(<TruthTablePage />)} />
           <Route path="/student/progress"                         element={S(<ProgressPage />)} />
           <Route path="/student/messages"                         element={S(<StudentMessagesPage />)} />
 

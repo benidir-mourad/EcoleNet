@@ -18,6 +18,8 @@ class Exercise extends Model
         'max_score',
         'auto_correct',
         'deadline',
+        'template_file_path',
+        'template_file_name',
     ];
 
     protected $casts = [

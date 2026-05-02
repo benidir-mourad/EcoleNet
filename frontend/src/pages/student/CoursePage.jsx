@@ -10,14 +10,14 @@ import StudentLayout from '../../components/layout/StudentLayout';
 import ResourceViewer from '../../components/ResourceViewer';
 
 const TYPE_LABELS = {
-  presentation:      'Présentation',
-  syllabus:          'Syllabus',
-  exercise:          'Exercice',
-  exercise_solution: 'Solution exercice',
-  revision:          'Révision',
-  revision_solution: 'Solution révision',
-  evaluation:        'Évaluation',
-  evaluation_solution: 'Correction évaluation',
+  presentation:        'Présentation',
+  syllabus:            'Syllabus',
+  exercise:            'Exercice',
+  exercise_solution:   "Solution d'exercice",
+  revision:            'Révision',
+  revision_solution:   'Solution de révision',
+  evaluation:          'Évaluation',
+  evaluation_solution: "Correction d'évaluation",
 };
 
 const TYPE_COLORS = {

@@ -1,42 +1,46 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Upload, ExternalLink, CheckSquare, Pencil, MessageCircle, GripVertical, PlayCircle, FileUp, Users, BookOpen } from 'lucide-react';
+import {
+  Eye, EyeOff, Upload, ExternalLink, Pencil, MessageCircle,
+  PlayCircle, FileUp, Users, BookOpen, Plus, Trash2, Zap,
+  CheckSquare, GripVertical,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
 import ResourceViewer from '../../components/ResourceViewer';
 
 const TYPE_LABELS = {
-  presentation:      'Présentation',
-  syllabus:          'Syllabus',
-  exercise:          'Exercice',
-  exercise_solution: 'Solution exercice',
-  revision:          'Révision',
-  revision_solution: 'Solution révision',
-  evaluation:        'Évaluation',
-  evaluation_solution: 'Correction évaluation',
+  presentation:        'Présentation',
+  syllabus:            'Syllabus',
+  exercise:            'Exercice',
+  exercise_solution:   "Solution d'exercice",
+  revision:            'Révision',
+  revision_solution:   'Solution de révision',
+  evaluation:          'Évaluation',
+  evaluation_solution: "Correction d'évaluation",
 };
 
 const TYPE_BORDER = {
-  presentation:      'border-l-blue-400',
-  syllabus:          'border-l-purple-400',
-  exercise:          'border-l-amber-400',
-  exercise_solution: 'border-l-green-400',
-  revision:          'border-l-cyan-400',
-  revision_solution: 'border-l-teal-400',
-  evaluation:        'border-l-red-400',
+  presentation:        'border-l-blue-400',
+  syllabus:            'border-l-purple-400',
+  exercise:            'border-l-amber-400',
+  exercise_solution:   'border-l-green-400',
+  revision:            'border-l-cyan-400',
+  revision_solution:   'border-l-teal-400',
+  evaluation:          'border-l-red-400',
   evaluation_solution: 'border-l-rose-400',
 };
 
 const TYPE_BADGE = {
-  presentation:      'text-blue-600 bg-blue-50',
-  syllabus:          'text-purple-600 bg-purple-50',
-  exercise:          'text-amber-600 bg-amber-50',
-  exercise_solution: 'text-green-600 bg-green-50',
-  revision:          'text-cyan-600 bg-cyan-50',
-  revision_solution: 'text-teal-600 bg-teal-50',
-  evaluation:        'text-red-600 bg-red-50',
+  presentation:        'text-blue-600 bg-blue-50',
+  syllabus:            'text-purple-600 bg-purple-50',
+  exercise:            'text-amber-600 bg-amber-50',
+  exercise_solution:   'text-green-600 bg-green-50',
+  revision:            'text-cyan-600 bg-cyan-50',
+  revision_solution:   'text-teal-600 bg-teal-50',
+  evaluation:          'text-red-600 bg-red-50',
   evaluation_solution: 'text-rose-600 bg-rose-50',
 };
 
@@ -44,9 +48,12 @@ const VIEWABLE_TYPES = ['pdf', 'image', 'video_upload', 'video_youtube', 'link',
 
 function ResourceCard({ resource, courseId, onPreview }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [uploading, setUploading] = useState(false);
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [showExerciseTypeModal, setShowExerciseTypeModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [subConfig, setSubConfig] = useState({ instructions: '', max_score: 20, deadline: '' });
   const [url, setUrl] = useState(resource.external_url || '');
 
@@ -76,19 +83,26 @@ function ResourceCard({ resource, courseId, onPreview }) {
       setShowSubmissionModal(false);
       toast.success('Remise de fichier activée');
     },
-    onError: () => toast.error('Erreur lors de l\'activation'),
+    onError: () => toast.error("Erreur lors de l'activation"),
+  });
+
+  const deleteResource = useMutation({
+    mutationFn: () => api.delete(`/teacher/resources/${resource.id}`),
+    onSuccess: () => {
+      qc.invalidateQueries(['teacher-course', courseId]);
+      toast.success('Ressource supprimée');
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
   });
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (file.size > 50 * 1024 * 1024) {
       toast.error('Fichier trop volumineux (max 50 Mo)');
       e.target.value = '';
       return;
     }
-
     setUploading(true);
     try {
       const form = new FormData();
@@ -99,8 +113,7 @@ function ResourceCard({ resource, courseId, onPreview }) {
       qc.invalidateQueries(['teacher-course', courseId]);
       toast.success(`"${file.name}" uploadé avec succès`);
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Erreur upload';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || err.message || 'Erreur upload');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -110,12 +123,13 @@ function ResourceCard({ resource, courseId, onPreview }) {
   const isEmpty = !resource.file_path && !resource.external_url && !resource.file_type;
 
   return (
-    <div className={`bg-white rounded-xl border-l-4 ${TYPE_BORDER[resource.type]} shadow-sm p-5`}>
+    <div className={`bg-white rounded-xl border-l-4 ${TYPE_BORDER[resource.type] || 'border-l-gray-300'} shadow-sm p-5`}>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[resource.type]}`}>
-              {TYPE_LABELS[resource.type]}
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[resource.type] || 'text-gray-600 bg-gray-50'}`}>
+              {TYPE_LABELS[resource.type] || resource.type}
             </span>
             {!isEmpty && (
               <span className={`text-xs px-2 py-0.5 rounded-full ${resource.is_visible ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -128,8 +142,8 @@ function ResourceCard({ resource, courseId, onPreview }) {
               </span>
             )}
           </div>
-          <h3 className="font-medium text-gray-800">{resource.title}</h3>
-          {resource.file_name && <p className="text-xs text-gray-400 mt-1">{resource.file_name}</p>}
+          <h3 className="font-medium text-gray-800 truncate">{resource.title}</h3>
+          {resource.file_name && <p className="text-xs text-gray-400 mt-0.5">{resource.file_name}</p>}
           {resource.external_url && (
             <a href={resource.external_url} target="_blank" rel="noreferrer"
               className="text-xs text-blue-600 hover:underline mt-1 inline-flex items-center gap-1">
@@ -139,10 +153,10 @@ function ResourceCard({ resource, courseId, onPreview }) {
           )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Actions */}
+        <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
           {!isEmpty && VIEWABLE_TYPES.includes(resource.file_type) && (
-            <button onClick={() => onPreview(resource)}
-              title="Prévisualiser"
+            <button onClick={() => onPreview(resource)} title="Prévisualiser"
               className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition">
               <PlayCircle size={18} />
             </button>
@@ -156,8 +170,9 @@ function ResourceCard({ resource, courseId, onPreview }) {
             </button>
           )}
 
-          <label title="Uploader un fichier" className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition">
-            {uploading ? <span className="text-xs">...</span> : <Upload size={18} />}
+          <label title="Uploader un fichier"
+            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition">
+            {uploading ? <span className="text-xs px-1">…</span> : <Upload size={18} />}
             <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
           </label>
 
@@ -166,40 +181,43 @@ function ResourceCard({ resource, courseId, onPreview }) {
             <ExternalLink size={18} />
           </button>
 
-          <Link title="Créer un QCM" to={`/teacher/resources/${resource.id}/qcm`}
+          {/* Unified exercise type picker */}
+          <button
+            title="Configurer comme exercice interactif"
+            onClick={() => setShowExerciseTypeModal(true)}
             className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
-            <CheckSquare size={18} />
-          </Link>
+            <Zap size={18} />
+          </button>
 
-          <Link title="Créer un Drag & Drop" to={`/teacher/resources/${resource.id}/dragdrop`}
-            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition">
-            <GripVertical size={18} />
-          </Link>
-
-          {resource.file_type === 'file_upload' ? (
+          {resource.file_type === 'file_upload' && (
             <>
-              <Link
-                title="Modifier l'énoncé"
-                to={`/teacher/resources/${resource.id}/exercise-editor`}
-                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-              >
+              <Link title="Modifier l'énoncé" to={`/teacher/resources/${resource.id}/exercise-editor`}
+                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
                 <BookOpen size={18} />
               </Link>
-              <Link
-                title="Voir les remises"
-                to={`/teacher/resources/${resource.id}/submissions`}
-                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
-              >
+              <Link title="Voir les remises" to={`/teacher/resources/${resource.id}/submissions`}
+                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition">
                 <Users size={18} />
               </Link>
             </>
+          )}
+
+          {/* Delete with inline confirmation */}
+          {confirmDelete ? (
+            <div className="flex items-center gap-1 ml-1">
+              <button onClick={() => deleteResource.mutate()} disabled={deleteResource.isPending}
+                className="px-2 py-1 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-60">
+                Oui, supprimer
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
+                Annuler
+              </button>
+            </div>
           ) : (
-            <button
-              title="Activer la remise de fichier"
-              onClick={() => setShowSubmissionModal(true)}
-              className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
-            >
-              <FileUp size={18} />
+            <button onClick={() => setConfirmDelete(true)} title="Supprimer cette ressource"
+              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
+              <Trash2 size={18} />
             </button>
           )}
         </div>
@@ -207,19 +225,21 @@ function ResourceCard({ resource, courseId, onPreview }) {
 
       {isEmpty && (
         <p className="text-xs text-gray-400 mt-3 italic">
-          Aucun contenu — uploadez un fichier, ajoutez un lien, créez un QCM ou un Drag &amp; Drop
+          Aucun contenu — uploadez un fichier, ajoutez un lien ou configurez comme exercice interactif
         </p>
       )}
 
+      {/* URL modal */}
       {showUrlModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <h3 className="font-semibold mb-4">Ajouter un lien</h3>
             <input value={url} onChange={e => setUrl(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
-              placeholder="https://..." />
+              placeholder="https://..." autoFocus />
             <div className="flex gap-3">
-              <button onClick={() => setShowUrlModal(false)} className="flex-1 border border-gray-300 py-2 rounded-lg">Annuler</button>
+              <button onClick={() => setShowUrlModal(false)}
+                className="flex-1 border border-gray-300 py-2 rounded-lg">Annuler</button>
               <button onClick={() => updateUrl.mutate(url)} disabled={!url.trim()}
                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg disabled:opacity-60">
                 Enregistrer
@@ -229,11 +249,58 @@ function ResourceCard({ resource, courseId, onPreview }) {
         </div>
       )}
 
+      {/* Exercise type picker modal */}
+      {showExerciseTypeModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="font-semibold mb-1">Type d'exercice interactif</h3>
+            <p className="text-sm text-gray-500 mb-5">Choisissez le format pour « {resource.title} »</p>
+            <div className="grid gap-3">
+              <button
+                onClick={() => { setShowExerciseTypeModal(false); navigate(`/teacher/resources/${resource.id}/qcm`); }}
+                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-amber-300 hover:bg-amber-50 rounded-xl transition text-left"
+              >
+                <CheckSquare size={22} className="text-amber-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-gray-800">QCM</p>
+                  <p className="text-xs text-gray-500">Questions à choix multiples, corrigées automatiquement</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowExerciseTypeModal(false); navigate(`/teacher/resources/${resource.id}/dragdrop`); }}
+                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-purple-300 hover:bg-purple-50 rounded-xl transition text-left"
+              >
+                <GripVertical size={22} className="text-purple-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-gray-800">Glisser-Déposer</p>
+                  <p className="text-xs text-gray-500">Associer des éléments par glisser-déposer</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowExerciseTypeModal(false); setShowSubmissionModal(true); }}
+                className="flex items-center gap-3 p-4 border-2 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl transition text-left"
+              >
+                <FileUp size={22} className="text-emerald-500 shrink-0" />
+                <div>
+                  <p className="font-medium text-gray-800">Remise de fichier</p>
+                  <p className="text-xs text-gray-500">Les élèves déposent un fichier ou saisissent du texte</p>
+                </div>
+              </button>
+            </div>
+            <button onClick={() => setShowExerciseTypeModal(false)}
+              className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 text-center py-1">
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Submission config modal */}
       {showSubmissionModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
             <h3 className="font-semibold mb-1">Activer la remise de fichier</h3>
-            <p className="text-sm text-gray-500 mb-4">Les élèves pourront déposer un fichier ou du texte.</p>
+            <p className="text-sm text-gray-500 mb-4">Les élèves pourront déposer un fichier ou saisir du texte.</p>
             <div className="space-y-3">
               <div>
                 <label className="text-sm text-gray-600 mb-1 block">Consignes (optionnel)</label>
@@ -292,6 +359,9 @@ export default function CourseDetailPage() {
   const [editName, setEditName] = useState(false);
   const [name, setName] = useState('');
   const [viewingResource, setViewingResource] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newType, setNewType] = useState('exercise');
+  const [newTitle, setNewTitle] = useState(TYPE_LABELS['exercise']);
 
   const { data } = useQuery({
     queryKey: ['teacher-course', courseId],
@@ -303,7 +373,22 @@ export default function CourseDetailPage() {
     onSuccess: () => { qc.invalidateQueries(['teacher-course', courseId]); setEditName(false); toast.success('Renommé'); },
   });
 
+  const addResource = useMutation({
+    mutationFn: () => api.post(`/teacher/courses/${courseId}/resources`, { type: newType, title: newTitle }),
+    onSuccess: () => {
+      qc.invalidateQueries(['teacher-course', courseId]);
+      setShowAddModal(false);
+      toast.success('Ressource ajoutée');
+    },
+    onError: () => toast.error("Erreur lors de l'ajout"),
+  });
+
   const course = data?.course;
+
+  const handleTypeChange = (type) => {
+    setNewType(type);
+    setNewTitle(TYPE_LABELS[type] || '');
+  };
 
   return (
     <TeacherLayout>
@@ -311,7 +396,7 @@ export default function CourseDetailPage() {
         <Link to={`/teacher/classes/${course?.section?.class_id}`} className="text-sm text-indigo-600 hover:underline">
           ← {course?.section?.school_class?.name} / {course?.section?.name}
         </Link>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-2 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             {editName ? (
               <div className="flex items-center gap-2">
@@ -332,12 +417,20 @@ export default function CourseDetailPage() {
             )}
           </div>
 
-          <Link
-            to={`/teacher/courses/${courseId}/forum`}
-            className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-100 text-sm font-medium transition"
-          >
-            <MessageCircle size={16} /> Forum du cours
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition"
+            >
+              <Plus size={16} /> Ajouter une ressource
+            </button>
+            <Link
+              to={`/teacher/courses/${courseId}/forum`}
+              className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-100 text-sm font-medium transition"
+            >
+              <MessageCircle size={16} /> Forum
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -347,13 +440,65 @@ export default function CourseDetailPage() {
         ))}
         {(!course?.resources || course.resources.length === 0) && (
           <div className="text-center text-gray-400 py-12 bg-white rounded-xl shadow-sm">
-            Aucune ressource pour ce cours.
+            <p className="mb-4">Aucune ressource pour ce cours.</p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm"
+            >
+              <Plus size={16} /> Ajouter la première ressource
+            </button>
           </div>
         )}
       </div>
 
       {viewingResource && (
         <ResourceViewer resource={viewingResource} onClose={() => setViewingResource(null)} />
+      )}
+
+      {/* Add resource modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="font-semibold mb-4">Ajouter une ressource</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">Type de ressource</label>
+                <select
+                  value={newType}
+                  onChange={e => handleTypeChange(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Object.entries(TYPE_LABELS).map(([type, label]) => (
+                    <option key={type} value={type}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">Titre</label>
+                <input
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Titre de la ressource"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setShowAddModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Annuler
+                </button>
+                <button
+                  onClick={() => addResource.mutate()}
+                  disabled={!newTitle.trim() || addResource.isPending}
+                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  {addResource.isPending ? 'Ajout…' : 'Ajouter'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </TeacherLayout>
   );

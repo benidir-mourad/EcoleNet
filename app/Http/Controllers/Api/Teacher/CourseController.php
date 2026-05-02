@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\Resource;
 use App\Models\Section;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -31,17 +30,6 @@ class CourseController extends Controller
         $data['order'] = $data['order'] ?? $section->courses()->max('order') + 1;
 
         $course = Course::create($data);
-
-        // Auto-create 8 resource slots
-        foreach (Resource::TYPES as $index => $type) {
-            Resource::create([
-                'course_id'  => $course->id,
-                'type'       => $type,
-                'title'      => ucfirst(str_replace('_', ' ', $type)),
-                'is_visible' => false,
-                'order'      => $index,
-            ]);
-        }
 
         return response()->json(['course' => $course->load('resources')], 201);
     }

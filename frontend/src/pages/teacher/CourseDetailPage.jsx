@@ -6,7 +6,7 @@ import {
   PlayCircle, FileUp, Users, BookOpen, Plus, Trash2, Zap,
   CheckSquare, GripVertical, ChevronDown, ChevronUp,
   Monitor, RefreshCw, ClipboardList, Award, CheckCircle, FileText,
-  BookMarked,
+  BookMarked, Library,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -647,11 +647,13 @@ function ChapterSection({ chapter, courseId, onPreview }) {
 export default function CourseDetailPage() {
   const { courseId } = useParams();
   const qc = useQueryClient();
-  const [editName, setEditName]           = useState(false);
-  const [name, setName]                   = useState('');
+  const navigate = useNavigate();
+  const [editName, setEditName]             = useState(false);
+  const [name, setName]                     = useState('');
   const [viewingResource, setViewingResource] = useState(null);
-  const [showAddChapter, setShowAddChapter]  = useState(false);
-  const [chapterTitle, setChapterTitle]      = useState('');
+  const [showAddChapter, setShowAddChapter]   = useState(false);
+  const [chapterTitle, setChapterTitle]       = useState('');
+  const [confirmArchive, setConfirmArchive]   = useState(false);
 
   const { data } = useQuery({
     queryKey: ['teacher-course', courseId],
@@ -672,6 +674,15 @@ export default function CourseDetailPage() {
       toast.success('Chapitre ajouté');
     },
     onError: () => toast.error("Erreur lors de l'ajout"),
+  });
+
+  const archiveCourse = useMutation({
+    mutationFn: () => api.post(`/teacher/courses/${courseId}/archive`),
+    onSuccess: () => {
+      toast.success('Cours archivé dans la bibliothèque');
+      navigate('/teacher/library');
+    },
+    onError: () => toast.error("Erreur lors de l'archivage"),
   });
 
   const course   = data?.course;
@@ -704,7 +715,7 @@ export default function CourseDetailPage() {
               </>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setShowAddChapter(true)}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition">
               <Plus size={16} /> Ajouter un chapitre
@@ -713,6 +724,23 @@ export default function CourseDetailPage() {
               className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-100 text-sm font-medium transition">
               <MessageCircle size={16} /> Forum
             </Link>
+            {confirmArchive ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500">Archiver ce cours ?</span>
+                <button onClick={() => archiveCourse.mutate()} disabled={archiveCourse.isPending}
+                  className="px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-60">
+                  {archiveCourse.isPending ? '…' : 'Oui, archiver'}
+                </button>
+                <button onClick={() => setConfirmArchive(false)} className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Non
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmArchive(true)} title="Archiver dans la bibliothèque"
+                className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg hover:bg-amber-100 text-sm font-medium transition">
+                <Library size={16} /> Archiver
+              </button>
+            )}
           </div>
         </div>
       </div>

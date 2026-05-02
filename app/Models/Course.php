@@ -17,10 +17,12 @@ class Course extends Model
         'description',
         'order',
         'is_active',
+        'is_archived',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'is_active'   => 'boolean',
+        'is_archived' => 'boolean',
     ];
 
     public function section()

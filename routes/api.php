@@ -44,6 +44,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // Courses
         Route::apiResource('sections.courses', CourseController::class)->shallow();
 
+        // Library
+        Route::get('library',                        [CourseController::class, 'library']);
+        Route::post('courses/{course}/archive',       [CourseController::class, 'archive']);
+        Route::post('library/{course}/assign',        [CourseController::class, 'assignToSection']);
+        Route::delete('library/{course}',             [CourseController::class, 'destroyFromLibrary']);
+
         // Chapters
         Route::post('courses/{course}/chapters',    [ChapterController::class, 'store']);
         Route::put('chapters/{chapter}',            [ChapterController::class, 'update']);

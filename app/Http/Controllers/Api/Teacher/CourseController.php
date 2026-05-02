@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Section;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
     public function index(Section $section)
     {
-        return response()->json(['courses' => $section->courses()->with('resources')->get()]);
+        return response()->json(['courses' => $section->courses()->where('is_archived', false)->with('resources')->get()]);
     }
 
     public function store(Request $request, Section $section)
@@ -67,5 +68,129 @@ class CourseController extends Controller
     {
         $course->delete();
         return response()->json(['message' => 'Course deleted.']);
+    }
+
+    // ── Library ───────────────────────────────────────────────────────────────
+
+    public function library(Request $request)
+    {
+        $courses = Course::where('teacher_id', $request->user()->id)
+            ->where('is_archived', true)
+            ->with(['chapters.resources.exercise', 'rootResources.exercise'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        return response()->json(['courses' => $courses]);
+    }
+
+    public function archive(Course $course)
+    {
+        $course->update(['is_archived' => true, 'section_id' => null]);
+        return response()->json(['message' => 'Cours archivé dans la bibliothèque.']);
+    }
+
+    public function assignToSection(Request $request, Course $course)
+    {
+        $request->validate(['section_id' => 'required|exists:sections,id']);
+
+        $newCourse = DB::transaction(function () use ($course, $request) {
+            $section = Section::findOrFail($request->section_id);
+
+            $newCourse = Course::create([
+                'section_id'  => $section->id,
+                'teacher_id'  => $request->user()->id,
+                'name'        => $course->name,
+                'slug'        => Str::slug($course->name . '-' . uniqid()),
+                'description' => $course->description,
+                'order'       => $section->courses()->max('order') + 1,
+                'is_active'   => true,
+                'is_archived' => false,
+            ]);
+
+            // Clone chapters + resources
+            $chapters = $course->chapters()->with('resources.exercise')->get();
+            foreach ($chapters as $ch) {
+                $newChapter = $newCourse->chapters()->create([
+                    'title' => $ch->title,
+                    'order' => $ch->order,
+                ]);
+                $this->cloneResources($ch->resources, $newCourse->id, $newChapter->id);
+            }
+
+            // Clone root resources (no chapter)
+            $rootResources = $course->rootResources()->with('exercise')->get();
+            $this->cloneResources($rootResources, $newCourse->id, null);
+
+            return $newCourse;
+        });
+
+        return response()->json([
+            'message' => 'Cours attribué avec succès.',
+            'course'  => $newCourse->load(['chapters.resources', 'section.schoolClass']),
+        ], 201);
+    }
+
+    private function cloneResources($resources, int $courseId, ?int $chapterId): void
+    {
+        foreach ($resources as $res) {
+            $newRes = \App\Models\Resource::create([
+                'course_id'    => $courseId,
+                'chapter_id'   => $chapterId,
+                'type'         => $res->type,
+                'file_type'    => $res->file_type,
+                'title'        => $res->title,
+                'file_path'    => $res->file_path,
+                'file_name'    => $res->file_name,
+                'file_size'    => $res->file_size,
+                'external_url' => $res->external_url,
+                'is_visible'   => $res->is_visible,
+                'order'        => $res->order,
+            ]);
+
+            // Clone exercise (fill_blanks, ordering, code_editor, truth_table, drag_drop, file_upload)
+            if ($res->exercise) {
+                $ex = $res->exercise;
+                \App\Models\Exercise::create([
+                    'resource_id'        => $newRes->id,
+                    'title'              => $ex->title,
+                    'instructions'       => $ex->instructions,
+                    'type'               => $ex->type,
+                    'content'            => $ex->content,
+                    'max_score'          => $ex->max_score,
+                    'auto_correct'       => $ex->auto_correct,
+                    'deadline'           => null, // don't copy deadline
+                    'template_file_path' => $ex->template_file_path,
+                    'template_file_name' => $ex->template_file_name,
+                ]);
+            }
+
+            // Clone QCM questions + options
+            if ($res->file_type === 'qcm') {
+                $questions = $res->qcmQuestions()->with('options')->get();
+                foreach ($questions as $q) {
+                    $newQ = \App\Models\QcmQuestion::create([
+                        'resource_id' => $newRes->id,
+                        'question'    => $q->question,
+                        'order'       => $q->order,
+                        'points'      => $q->points,
+                        'explanation' => $q->explanation,
+                    ]);
+                    foreach ($q->options as $opt) {
+                        \App\Models\QcmOption::create([
+                            'question_id' => $newQ->id,
+                            'label'       => $opt->label,
+                            'is_correct'  => $opt->is_correct,
+                            'order'       => $opt->order,
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+
+    public function destroyFromLibrary(Course $course)
+    {
+        $course->delete();
+        return response()->json(['message' => 'Cours supprimé de la bibliothèque.']);
     }
 }

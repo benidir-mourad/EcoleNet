@@ -18,6 +18,7 @@ import TeacherForumPage from './pages/teacher/ForumPage';
 import DragDropBuilderPage from './pages/teacher/DragDropBuilderPage';
 import SubmissionsPage from './pages/teacher/SubmissionsPage';
 import ExerciseEditorPage from './pages/teacher/ExerciseEditorPage';
+import LibraryPage from './pages/teacher/LibraryPage';
 import FillBlanksBuilderPage from './pages/teacher/FillBlanksBuilderPage';
 import OrderingBuilderPage from './pages/teacher/OrderingBuilderPage';
 import CodeEditorBuilderPage from './pages/teacher/CodeEditorBuilderPage';
@@ -78,6 +79,7 @@ export default function App() {
           <Route path="/teacher/resources/:resourceId/ordering"       element={T(<OrderingBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/code-editor"    element={T(<CodeEditorBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/truth-table"    element={T(<TruthTableBuilderPage />)} />
+          <Route path="/teacher/library"                              element={T(<LibraryPage />)} />
 
           {/* Student */}
           <Route path="/student/dashboard"                        element={S(<StudentDashboard />)} />

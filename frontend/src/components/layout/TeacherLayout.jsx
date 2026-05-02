@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Users, MessageSquare, BarChart2,
-  LogOut, Camera, X, Cpu,
+  LogOut, Camera, X, Cpu, Library,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useMutation } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import AppFooter from './AppFooter';
 const nav = [
   { to: '/teacher/dashboard',   icon: LayoutDashboard, label: 'Tableau de bord' },
   { to: '/teacher/classes',     icon: BookOpen,         label: 'Classes & Cours' },
+  { to: '/teacher/library',     icon: Library,          label: 'Bibliothèque'    },
   { to: '/teacher/enrollments', icon: Users,            label: 'Inscriptions'    },
   { to: '/teacher/messages',    icon: MessageSquare,    label: 'Messages'        },
   { to: '/teacher/stats',       icon: BarChart2,        label: 'Statistiques'   },

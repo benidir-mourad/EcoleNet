@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Download, ExternalLink, Monitor } from 'lucide-react';
+import { useState } from 'react';
+import { X, ZoomIn, ZoomOut, Download, ExternalLink, Monitor, Loader2, AlertCircle } from 'lucide-react';
 import ReactPlayer from 'react-player';
 
 const BASE = 'http://localhost:8000';
@@ -69,41 +69,61 @@ function VideoViewer({ url, isYoutube }) {
 }
 
 /* ── Office files ───────────────────────────────────────────────────────── */
-const OFFICE_SCHEMES = {
-  pptx: 'ms-powerpoint',
-  docx: 'ms-word',
-  xlsx: 'ms-excel',
-};
+const OFFICE_LABELS = { pptx: 'PowerPoint', docx: 'Word', xlsx: 'Excel' };
+const OFFICE_ICONS  = { pptx: '🟠', docx: '🔵', xlsx: '🟢' };
 
-const OFFICE_LABELS = {
-  pptx: 'PowerPoint',
-  docx: 'Word',
-  xlsx: 'Excel',
-};
+const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
-const OFFICE_ICONS = {
-  pptx: '🟠',
-  docx: '🔵',
-  xlsx: '🟢',
-};
+/* PPTX : Office Online embed (nécessite une URL publique) */
+function PptxViewer({ url, fileName }) {
+  const [loading, setLoading] = useState(true);
 
+  if (isLocalhost) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 gap-5 p-8 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
+          <AlertCircle size={28} className="text-orange-500" />
+        </div>
+        <div>
+          <p className="font-semibold text-gray-800 mb-1">Visualisation non disponible en local</p>
+          <p className="text-sm text-gray-500 max-w-sm">
+            La visualisation en ligne nécessite une URL publique.<br />
+            Elle sera active une fois le site déployé en production.
+          </p>
+        </div>
+        <a href={url} download={fileName}
+          className="flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 font-medium shadow-sm">
+          <Download size={18} /> Télécharger le fichier
+        </a>
+      </div>
+    );
+  }
+
+  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+
+  return (
+    <div className="flex-1 flex flex-col relative bg-gray-900">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+          <Loader2 size={32} className="text-white animate-spin" />
+        </div>
+      )}
+      <iframe
+        src={officeUrl}
+        className="flex-1 w-full border-0"
+        title={fileName}
+        onLoad={() => setLoading(false)}
+        style={{ minHeight: '70vh' }}
+        allow="fullscreen"
+      />
+    </div>
+  );
+}
+
+/* docx / xlsx : lien + téléchargement */
 function OfficeViewer({ url, fileType, fileName }) {
-  const scheme = OFFICE_SCHEMES[fileType];
   const label = OFFICE_LABELS[fileType] || 'Office';
-  const icon = OFFICE_ICONS[fileType] || '📄';
-
-  const openInOffice = () => {
-    if (scheme) {
-      const officeUrl = `${scheme}:ofv|u|${url}`;
-      window.location.href = officeUrl;
-    }
-  };
-
-  const openPresentation = () => {
-    if (fileType === 'pptx') {
-      window.location.href = `ms-powerpoint:opc|u|${url}`;
-    }
-  };
+  const icon  = OFFICE_ICONS[fileType]  || '📄';
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 gap-6 p-8">
@@ -112,39 +132,16 @@ function OfficeViewer({ url, fileType, fileName }) {
         <p className="font-semibold text-gray-800 text-lg mb-1">{fileName}</p>
         <p className="text-sm text-gray-500">Fichier {label}</p>
       </div>
-
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <button
-          onClick={openInOffice}
-          className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 font-medium shadow-sm"
-        >
-          <ExternalLink size={18} />
-          Ouvrir dans {label}
+        <button onClick={() => { window.location.href = `ms-${fileType === 'docx' ? 'word' : 'excel'}:ofv|u|${url}`; }}
+          className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 font-medium shadow-sm">
+          <ExternalLink size={18} /> Ouvrir dans {label}
         </button>
-
-        {fileType === 'pptx' && (
-          <button
-            onClick={openPresentation}
-            className="flex items-center justify-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-xl hover:bg-orange-600 font-medium shadow-sm"
-          >
-            <Monitor size={18} />
-            Mode présentation
-          </button>
-        )}
-
-        <a
-          href={url}
-          download={fileName}
-          className="flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-100 font-medium"
-        >
-          <Download size={18} />
-          Télécharger
+        <a href={url} download={fileName}
+          className="flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-100 font-medium">
+          <Download size={18} /> Télécharger
         </a>
       </div>
-
-      <p className="text-xs text-gray-400 text-center max-w-sm">
-        Nécessite Microsoft Office installé. Si le fichier ne s'ouvre pas automatiquement, utilisez le bouton Télécharger.
-      </p>
     </div>
   );
 }
@@ -174,7 +171,8 @@ export default function ResourceViewer({ resource, onClose }) {
         </a>
       </div>
     );
-    if (['pptx', 'docx', 'xlsx'].includes(ft)) {
+    if (ft === 'pptx') return <PptxViewer url={url} fileName={resource.file_name || resource.title} />;
+    if (['docx', 'xlsx'].includes(ft)) {
       return <OfficeViewer url={url} fileType={ft} fileName={resource.file_name || resource.title} />;
     }
     return (

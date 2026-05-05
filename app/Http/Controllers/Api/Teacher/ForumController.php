@@ -3,14 +3,19 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Course;
 use App\Models\ForumPost;
 use Illuminate\Http\Request;
 
 class ForumController extends Controller
 {
-    public function index(Course $course)
+    use AuthorizesCourseAccess;
+
+    public function index(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $posts = ForumPost::where('course_id', $course->id)
             ->whereNull('parent_id')
             ->with('user', 'replies.user')
@@ -23,6 +28,8 @@ class ForumController extends Controller
 
     public function store(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $data = $request->validate([
             'title'   => 'nullable|string|max:200',
             'content' => 'required|string|max:5000',
@@ -38,14 +45,18 @@ class ForumController extends Controller
         return response()->json(['post' => $post->load('user')], 201);
     }
 
-    public function destroy(ForumPost $post)
+    public function destroy(Request $request, ForumPost $post)
     {
+        $this->ensureTeacherOwnsPost($request, $post);
+
         $post->delete();
         return response()->json(['message' => 'Post deleted.']);
     }
 
     public function reply(Request $request, ForumPost $post)
     {
+        $this->ensureTeacherOwnsPost($request, $post);
+
         $data = $request->validate([
             'content' => 'required|string|max:5000',
         ]);
@@ -60,8 +71,10 @@ class ForumController extends Controller
         return response()->json(['reply' => $reply->load('user')], 201);
     }
 
-    public function togglePin(ForumPost $post)
+    public function togglePin(Request $request, ForumPost $post)
     {
+        $this->ensureTeacherOwnsPost($request, $post);
+
         $post->update(['is_pinned' => !$post->is_pinned]);
         return response()->json(['post' => $post->fresh()]);
     }

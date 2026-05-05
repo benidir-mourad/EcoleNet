@@ -41,7 +41,7 @@ export default function QcmPage() {
           </div>
 
           <div className="space-y-4 mb-8">
-            {result.questions?.map((q, i) => {
+            {result.questions?.map((q) => {
               const correct = Array.isArray(q.correct_ids)
                 ? q.correct_ids.includes(parseInt(q.your_answer))
                 : q.correct_ids == q.your_answer;

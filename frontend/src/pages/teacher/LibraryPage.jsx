@@ -38,7 +38,6 @@ const FILE_TYPE_ICONS = {
 /* ── AssignModal ─────────────────────────────────────────────────────────── */
 
 function AssignModal({ course, onClose }) {
-  const qc = useQueryClient();
   const [selectedSection, setSelectedSection] = useState(null);
 
   const { data: classesData } = useQuery({
@@ -219,6 +218,9 @@ function ResourceLine({ resource }) {
     <div className="flex items-center gap-2 text-sm text-gray-600">
       <Icon size={12} className="text-gray-400 shrink-0" />
       <span className="truncate">{resource.title}</span>
+      {TYPE_LABELS[resource.type] && (
+        <span className="text-xs text-gray-400 shrink-0">{TYPE_LABELS[resource.type]}</span>
+      )}
       {resource.file_type && (
         <span className="text-xs text-gray-400 shrink-0">{resource.file_type.replace('_', ' ')}</span>
       )}

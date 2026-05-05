@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Course;
 use App\Models\Section;
 use Illuminate\Http\Request;
@@ -11,9 +12,17 @@ use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
-    public function index(Section $section)
+    use AuthorizesCourseAccess;
+
+    public function index(Request $request, Section $section)
     {
-        return response()->json(['courses' => $section->courses()->where('is_archived', false)->with('resources')->get()]);
+        $courses = $section->courses()
+            ->where('is_archived', false)
+            ->when($request->user()->role !== 'admin', fn ($q) => $q->where('teacher_id', $request->user()->id))
+            ->with('resources')
+            ->get();
+
+        return response()->json(['courses' => $courses]);
     }
 
     public function store(Request $request, Section $section)
@@ -28,15 +37,17 @@ class CourseController extends Controller
         $data['section_id'] = $section->id;
         $data['teacher_id'] = $request->user()->id;
         $data['slug'] = Str::slug($data['name'] . '-' . uniqid());
-        $data['order'] = $data['order'] ?? $section->courses()->max('order') + 1;
+        $data['order'] = $data['order'] ?? (($section->courses()->max('order') ?? 0) + 1);
 
         $course = Course::create($data);
 
         return response()->json(['course' => $course->load('resources')], 201);
     }
 
-    public function show(Course $course)
+    public function show(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         return response()->json([
             'course' => $course->load([
                 'chapters.resources',
@@ -48,6 +59,8 @@ class CourseController extends Controller
 
     public function update(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $data = $request->validate([
             'name'        => 'sometimes|string|max:200',
             'description' => 'nullable|string',
@@ -64,8 +77,10 @@ class CourseController extends Controller
         return response()->json(['course' => $course->fresh()->load('resources')]);
     }
 
-    public function destroy(Course $course)
+    public function destroy(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $course->delete();
         return response()->json(['message' => 'Course deleted.']);
     }
@@ -83,14 +98,18 @@ class CourseController extends Controller
         return response()->json(['courses' => $courses]);
     }
 
-    public function archive(Course $course)
+    public function archive(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $course->update(['is_archived' => true, 'section_id' => null]);
         return response()->json(['message' => 'Cours archivé dans la bibliothèque.']);
     }
 
     public function assignToSection(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $request->validate(['section_id' => 'required|exists:sections,id']);
 
         $newCourse = DB::transaction(function () use ($course, $request) {
@@ -102,7 +121,7 @@ class CourseController extends Controller
                 'name'        => $course->name,
                 'slug'        => Str::slug($course->name . '-' . uniqid()),
                 'description' => $course->description,
-                'order'       => $section->courses()->max('order') + 1,
+                'order'       => ($section->courses()->max('order') ?? 0) + 1,
                 'is_active'   => true,
                 'is_archived' => false,
             ]);
@@ -188,8 +207,10 @@ class CourseController extends Controller
         }
     }
 
-    public function destroyFromLibrary(Course $course)
+    public function destroyFromLibrary(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $course->delete();
         return response()->json(['message' => 'Cours supprimé de la bibliothèque.']);
     }

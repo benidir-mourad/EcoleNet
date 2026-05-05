@@ -1,4 +1,4 @@
-import { Code2, Cpu, Terminal, Wifi } from 'lucide-react';
+import { Code2, Cpu, Wifi } from 'lucide-react';
 
 const THEMES = {
   indigo: { text: 'text-indigo-400', border: 'border-indigo-100', code: 'text-indigo-500' },

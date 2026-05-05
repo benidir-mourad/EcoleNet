@@ -5,6 +5,7 @@ import {
   LogOut, Camera, X, Cpu, Library,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { storageUrl } from '../../config';
 import { useMutation } from '@tanstack/react-query';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
@@ -33,7 +34,7 @@ function ProfileModal({ onClose }) {
     password_confirmation: '',
   });
   const [preview, setPreview] = useState(
-    user?.avatar ? `http://localhost:8000/storage/${user.avatar}` : null
+    user?.avatar ? storageUrl(user.avatar) : null
   );
   const [avatarFile, setAvatarFile] = useState(null);
 
@@ -195,7 +196,7 @@ export default function TeacherLayout({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
-  const avatarUrl = user?.avatar ? `http://localhost:8000/storage/${user.avatar}` : null;
+  const avatarUrl = user?.avatar ? storageUrl(user.avatar) : null;
 
   return (
     <div className="flex min-h-screen bg-gray-50">

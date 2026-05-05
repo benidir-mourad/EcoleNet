@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Exercise;
 use App\Models\ExerciseSubmission;
 use App\Models\QcmOption;
@@ -13,16 +14,22 @@ use Illuminate\Support\Facades\Storage;
 
 class ExerciseController extends Controller
 {
+    use AuthorizesCourseAccess;
+
     // ── QCM ──────────────────────────────────────────────────────────────────
 
-    public function getQcm(Resource $resource)
+    public function getQcm(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $questions = $resource->qcmQuestions()->with('options')->get();
         return response()->json(['questions' => $questions]);
     }
 
     public function saveQcm(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'questions'                        => 'required|array|min:1',
             'questions.*.question'             => 'required|string',
@@ -63,13 +70,17 @@ class ExerciseController extends Controller
 
     // ── Drag & Drop ──────────────────────────────────────────────────────────
 
-    public function getDragDrop(Resource $resource)
+    public function getDragDrop(Request $request, Resource $resource)
     {
+        $this->ensureCurrentUserCanAccessResource($request, $resource);
+
         return response()->json(['exercise' => $resource->exercise]);
     }
 
     public function saveDragDrop(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'title'        => 'required|string|max:200',
             'instructions' => 'nullable|string|max:1000',
@@ -97,6 +108,8 @@ class ExerciseController extends Controller
 
     public function attemptDragDrop(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $data = $request->validate([
             'answers'         => 'required|array',
             'answers.*.left'  => 'required|string',
@@ -144,13 +157,17 @@ class ExerciseController extends Controller
 
     // ── Fill Blanks ───────────────────────────────────────────────────────────
 
-    public function getFillBlanks(Resource $resource)
+    public function getFillBlanks(Request $request, Resource $resource)
     {
+        $this->ensureCurrentUserCanAccessResource($request, $resource);
+
         return response()->json(['exercise' => $resource->exercise]);
     }
 
     public function saveFillBlanks(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'title'          => 'required|string|max:200',
             'template'       => 'required|string',
@@ -184,6 +201,8 @@ class ExerciseController extends Controller
 
     public function attemptFillBlanks(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $data = $request->validate([
             'answers'   => 'required|array',
             'answers.*' => 'nullable|string',
@@ -237,13 +256,17 @@ class ExerciseController extends Controller
 
     // ── Ordering ──────────────────────────────────────────────────────────────
 
-    public function getOrdering(Resource $resource)
+    public function getOrdering(Request $request, Resource $resource)
     {
+        $this->ensureCurrentUserCanAccessResource($request, $resource);
+
         return response()->json(['exercise' => $resource->exercise]);
     }
 
     public function saveOrdering(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'title'        => 'required|string|max:200',
             'instructions' => 'nullable|string|max:2000',
@@ -270,6 +293,8 @@ class ExerciseController extends Controller
 
     public function attemptOrdering(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $data = $request->validate([
             'order'   => 'required|array',
             'order.*' => 'integer',
@@ -317,13 +342,17 @@ class ExerciseController extends Controller
 
     // ── Code Editor ───────────────────────────────────────────────────────────
 
-    public function getCodeEditor(Resource $resource)
+    public function getCodeEditor(Request $request, Resource $resource)
     {
+        $this->ensureCurrentUserCanAccessResource($request, $resource);
+
         return response()->json(['exercise' => $resource->exercise]);
     }
 
     public function saveCodeEditor(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'title'           => 'required|string|max:200',
             'instructions'    => 'nullable|string|max:100000',
@@ -358,13 +387,17 @@ class ExerciseController extends Controller
 
     // ── Truth Table ───────────────────────────────────────────────────────────
 
-    public function getTruthTable(Resource $resource)
+    public function getTruthTable(Request $request, Resource $resource)
     {
+        $this->ensureCurrentUserCanAccessResource($request, $resource);
+
         return response()->json(['exercise' => $resource->exercise]);
     }
 
     public function saveTruthTable(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'title'                       => 'required|string|max:200',
             'instructions'                => 'nullable|string|max:2000',
@@ -404,6 +437,8 @@ class ExerciseController extends Controller
 
     public function attemptTruthTable(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $data = $request->validate([
             'answers'     => 'required|array',
             'answers.*'   => 'required|array',
@@ -453,6 +488,8 @@ class ExerciseController extends Controller
 
     public function uploadTemplate(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $request->validate(['file' => 'required|file|max:20480']);
 
         $exercise = $resource->exercise;
@@ -477,13 +514,17 @@ class ExerciseController extends Controller
 
     // ── File submissions ──────────────────────────────────────────────────────
 
-    public function getExercise(Resource $resource)
+    public function getExercise(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         return response()->json(['exercise' => $resource->exercise]);
     }
 
     public function updateExercise(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $exercise = $resource->exercise;
         if (!$exercise) {
             return response()->json(['message' => 'Exercise not found.'], 404);
@@ -502,6 +543,8 @@ class ExerciseController extends Controller
 
     public function enableSubmission(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'instructions' => 'nullable|string|max:2000',
             'max_score'    => 'nullable|integer|min:1|max:100',
@@ -526,8 +569,10 @@ class ExerciseController extends Controller
         return response()->json(['exercise' => $exercise]);
     }
 
-    public function resourceSubmissions(Resource $resource)
+    public function resourceSubmissions(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $exercise = $resource->exercise;
         if (!$exercise) {
             return response()->json(['submissions' => [], 'exercise' => null]);
@@ -537,14 +582,19 @@ class ExerciseController extends Controller
         return response()->json(['submissions' => $submissions, 'exercise' => $exercise]);
     }
 
-    public function submissions(Exercise $exercise)
+    public function submissions(Request $request, Exercise $exercise)
     {
+        $this->ensureTeacherOwnsExercise($request, $exercise);
+
         $submissions = $exercise->submissions()->with('student')->latest()->get();
         return response()->json(['submissions' => $submissions]);
     }
 
     public function correct(Request $request, ExerciseSubmission $submission)
     {
+        $submission->loadMissing('exercise.resource.course');
+        $this->ensureTeacherOwnsExercise($request, $submission->exercise);
+
         $data = $request->validate([
             'score'           => 'required|numeric|min:0',
             'teacher_comment' => 'nullable|string',

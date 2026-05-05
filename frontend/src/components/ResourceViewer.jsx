@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { X, ZoomIn, ZoomOut, Download, ExternalLink, Monitor, Loader2, AlertCircle } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Download, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import ReactPlayer from 'react-player';
-
-const BASE = 'http://localhost:8000';
+import { storageUrl } from '../config';
 
 function fileUrl(path) {
-  return `${BASE}/storage/${path}`;
+  return storageUrl(path);
 }
 
 /* ── PDF viewer ─────────────────────────────────────────────────────────── */

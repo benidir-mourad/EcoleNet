@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Save, ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
+
+function stableScore(value) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 1000003;
+  }
+  return hash;
+}
 
 export default function OrderingBuilderPage() {
   const { resourceId } = useParams();
@@ -47,6 +55,14 @@ export default function OrderingBuilderPage() {
   };
 
   const valid = title.trim() && items.filter(i => i.trim()).length >= 2;
+  const filledItems = items.filter(item => item.trim());
+  const filledItemsKey = filledItems.join('|');
+  const shuffledItems = useMemo(
+    () => filledItems
+      .map((item, index) => ({ item, sort: stableScore(`${filledItemsKey}:${item}:${index}`) }))
+      .sort((a, b) => a.sort - b.sort),
+    [filledItems, filledItemsKey]
+  );
 
   return (
     <TeacherLayout>
@@ -128,10 +144,7 @@ export default function OrderingBuilderPage() {
           <div className="mt-5 bg-amber-50 rounded-xl p-4">
             <p className="text-xs font-medium text-amber-800 mb-2">Aperçu mélangé (vue élève) :</p>
             <div className="space-y-1.5">
-              {[...items].filter(i => i.trim())
-                .map((item, i) => ({ item, sort: Math.random() }))
-                .sort((a, b) => a.sort - b.sort)
-                .map(({ item }, i) => (
+              {shuffledItems.map(({ item }, i) => (
                   <div key={i} className="flex items-center gap-2 bg-white rounded-lg p-2 border border-amber-100">
                     <GripVertical size={14} className="text-gray-300" />
                     <span className="font-mono text-xs text-gray-700">{item}</span>

@@ -1,15 +1,15 @@
 import { useState } from 'react';
+import { storageUrl } from '../../config';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageCircle, Pin, Trash2, Plus, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
-import useAuthStore from '../../store/authStore';
 
 function Avatar({ user, size = 8 }) {
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
-  const avatarUrl = user?.avatar ? `http://localhost:8000/storage/${user.avatar}` : null;
+  const avatarUrl = user?.avatar ? storageUrl(user.avatar) : null;
   const cls = `w-${size} h-${size} rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden shrink-0`;
   return (
     <div className={cls}>
@@ -133,7 +133,6 @@ function PostCard({ post, courseId, onDelete, onPin }) {
 export default function TeacherForumPage() {
   const { courseId } = useParams();
   const qc = useQueryClient();
-  const { user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', content: '' });
 

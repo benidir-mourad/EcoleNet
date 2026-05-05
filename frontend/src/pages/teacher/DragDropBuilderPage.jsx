@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, GripVertical, Save, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
+
+function stableScore(value) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) % 1000003;
+  }
+  return hash;
+}
 
 export default function DragDropBuilderPage() {
   const { resourceId } = useParams();
@@ -56,6 +64,14 @@ export default function DragDropBuilderPage() {
 
   const canSave = title.trim() && pairs.length >= 2 && pairs.every(p => p.left.trim() && p.right.trim());
   const previewPairs = pairs.filter(p => p.left && p.right);
+  const previewKey = previewPairs.map(p => `${p.left}:${p.right}`).join('|');
+  const shuffledPreviewPairs = useMemo(
+    () => previewPairs
+      .map((pair, index) => ({ pair, score: stableScore(`${previewKey}:${pair.right}:${index}`) }))
+      .sort((a, b) => a.score - b.score)
+      .map(({ pair }) => pair),
+    [previewPairs, previewKey]
+  );
 
   return (
     <TeacherLayout>
@@ -149,7 +165,7 @@ export default function DragDropBuilderPage() {
               <div>
                 <p className="text-xs font-semibold text-indigo-600 mb-2 uppercase tracking-wide">À placer (mélangé)</p>
                 <div className="space-y-2">
-                  {[...previewPairs].sort(() => Math.random() - 0.5).map((p, i) => (
+                  {shuffledPreviewPairs.map((p, i) => (
                     <div key={i} className="bg-white border-2 border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-700 cursor-grab select-none">
                       {p.right}
                     </div>

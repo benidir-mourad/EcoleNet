@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\ExerciseSubmission;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class StatsController extends Controller
 {
+    use AuthorizesCourseAccess;
+
     public function overview(Request $request)
     {
         $teacherId = $request->user()->id;
@@ -54,8 +57,10 @@ class StatsController extends Controller
         return response()->json(['courses' => $courses]);
     }
 
-    public function course(Course $course)
+    public function course(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $submissions = ExerciseSubmission::whereHas('exercise.resource', fn($q) => $q->where('course_id', $course->id))
             ->get();
 

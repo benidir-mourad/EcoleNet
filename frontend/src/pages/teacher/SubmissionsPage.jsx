@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { storageUrl } from '../../config';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Download, CheckCircle, Clock, ArrowLeft, Pencil } from 'lucide-react';
@@ -53,7 +54,7 @@ function SubmissionCard({ submission, exercise, resourceId }) {
 
           {submission.file_path && (
             <a
-              href={`http://localhost:8000/storage/${submission.file_path}`}
+              href={storageUrl(submission.file_path)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:underline mb-2"

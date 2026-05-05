@@ -16,13 +16,14 @@ export function useAuth() {
 
   const register = useCallback(async (formData) => {
     const { data } = await api.post('/register', formData);
-    setAuth(data.user, data.token);
-    navigate('/student/dashboard');
+    navigate('/login');
     return data;
-  }, [setAuth, navigate]);
+  }, [navigate]);
 
   const logout = useCallback(async () => {
-    try { await api.post('/logout'); } catch {}
+    try { await api.post('/logout'); } catch {
+      // Local cleanup still needs to happen if the token is already invalid.
+    }
     clearAuth();
     navigate('/login');
   }, [clearAuth, navigate]);

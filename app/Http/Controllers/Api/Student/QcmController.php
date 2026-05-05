@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\QcmAttempt;
 use App\Models\Resource;
 use App\Models\StudentProgress;
@@ -10,8 +11,12 @@ use Illuminate\Http\Request;
 
 class QcmController extends Controller
 {
+    use AuthorizesCourseAccess;
+
     public function attempt(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $student = $request->user();
 
         $data = $request->validate([
@@ -88,6 +93,8 @@ class QcmController extends Controller
 
     public function myAttempts(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $attempts = QcmAttempt::where('student_id', $request->user()->id)
             ->where('resource_id', $resource->id)
             ->orderBy('attempt_number')
@@ -96,14 +103,18 @@ class QcmController extends Controller
         return response()->json(['attempts' => $attempts]);
     }
 
-    public function getQcm(Resource $resource)
+    public function getQcm(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $questions = $resource->qcmQuestions()->with('options')->get();
         return response()->json(['questions' => $questions]);
     }
 
-    public function getDragDrop(Resource $resource)
+    public function getDragDrop(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $exercise = $resource->exercise;
         if (!$exercise || $exercise->type !== 'drag_drop') {
             return response()->json(['exercise' => null]);

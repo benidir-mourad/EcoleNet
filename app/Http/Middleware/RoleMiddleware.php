@@ -14,6 +14,10 @@ class RoleMiddleware
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        if ($request->user()->status !== 'active') {
+            return response()->json(['message' => 'Account is pending validation.'], 403);
+        }
+
         return $next($request);
     }
 }

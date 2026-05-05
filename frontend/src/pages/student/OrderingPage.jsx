@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowLeft, CheckCircle, RotateCcw, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
@@ -27,13 +27,13 @@ export default function OrderingPage() {
   });
 
   const exercise = data?.exercise;
-  const items = exercise?.content?.items || [];
+  const items = useMemo(() => exercise?.content?.items || [], [exercise]);
 
   useEffect(() => {
     if (items.length > 0 && !order) {
       setOrder(shuffle(items.map((item, i) => ({ item, origIdx: i }))));
     }
-  }, [items.length]);
+  }, [items, order]);
 
   const attempt = useMutation({
     mutationFn: () => {

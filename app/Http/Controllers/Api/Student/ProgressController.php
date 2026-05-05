@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Resource;
@@ -11,8 +12,12 @@ use Illuminate\Http\Request;
 
 class ProgressController extends Controller
 {
+    use AuthorizesCourseAccess;
+
     public function markViewed(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $student = $request->user();
 
         StudentProgress::updateOrCreate(
@@ -67,6 +72,8 @@ class ProgressController extends Controller
 
     public function course(Request $request, Course $course)
     {
+        $this->ensureStudentCanAccessCourse($request, $course);
+
         $student = $request->user();
 
         $progress = StudentProgress::where('student_id', $student->id)

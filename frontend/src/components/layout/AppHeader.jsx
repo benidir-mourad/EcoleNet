@@ -1,4 +1,4 @@
-import { Code2, Cpu, Terminal, Wifi, Database, Binary } from 'lucide-react';
+import { Code2, Cpu, Terminal, Database, Binary } from 'lucide-react';
 
 const ICONS = [
   { Icon: Code2,    cls: 'anim-float',   title: 'Code' },

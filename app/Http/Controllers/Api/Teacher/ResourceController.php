@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Chapter;
 use App\Models\Course;
 use App\Models\Resource;
@@ -11,13 +12,19 @@ use Illuminate\Support\Facades\Storage;
 
 class ResourceController extends Controller
 {
-    public function index(Course $course)
+    use AuthorizesCourseAccess;
+
+    public function index(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         return response()->json(['resources' => $course->resources]);
     }
 
     public function store(Request $request, Course $course)
     {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
         $data = $request->validate([
             'type'         => 'required|in:' . implode(',', Resource::TYPES),
             'file_type'    => 'nullable|in:pdf,pptx,docx,xlsx,image,video_upload,video_youtube,link,qcm,drag_drop,excel_interactive,file_upload',
@@ -36,6 +43,8 @@ class ResourceController extends Controller
 
     public function storeForChapter(Request $request, Chapter $chapter)
     {
+        $this->ensureTeacherOwnsChapter($request, $chapter);
+
         $data = $request->validate([
             'type'  => 'required|in:' . implode(',', Resource::TYPES),
             'title' => 'required|string|max:200',
@@ -47,19 +56,23 @@ class ResourceController extends Controller
             'type'       => $data['type'],
             'title'      => $data['title'],
             'is_visible' => false,
-            'order'      => $chapter->resources()->max('order') + 1,
+            'order'      => ($chapter->resources()->max('order') ?? 0) + 1,
         ]);
 
         return response()->json(['resource' => $resource], 201);
     }
 
-    public function show(Resource $resource)
+    public function show(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         return response()->json(['resource' => $resource->load('qcmQuestions.options')]);
     }
 
     public function update(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $data = $request->validate([
             'file_type'    => 'nullable|in:pdf,pptx,docx,xlsx,image,video_upload,video_youtube,link,qcm,drag_drop,excel_interactive,file_upload',
             'title'        => 'sometimes|string|max:200',
@@ -72,8 +85,10 @@ class ResourceController extends Controller
         return response()->json(['resource' => $resource->fresh()]);
     }
 
-    public function destroy(Resource $resource)
+    public function destroy(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         if ($resource->file_path) {
             Storage::delete($resource->file_path);
         }
@@ -82,14 +97,18 @@ class ResourceController extends Controller
         return response()->json(['message' => 'Resource deleted.']);
     }
 
-    public function toggleVisibility(Resource $resource)
+    public function toggleVisibility(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $resource->update(['is_visible' => !$resource->is_visible]);
         return response()->json(['resource' => $resource->fresh()]);
     }
 
     public function uploadFile(Request $request, Resource $resource)
     {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
         $request->validate([
             'file' => 'required|file|max:51200',
         ]);

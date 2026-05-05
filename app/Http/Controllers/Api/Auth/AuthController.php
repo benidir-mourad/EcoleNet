@@ -29,11 +29,9 @@ class AuthController extends Controller
             'status'     => 'pending',
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
         return response()->json([
             'user'  => $this->userResource($user),
-            'token' => $token,
+            'message' => 'Registration received. Your account is pending validation.',
         ], 201);
     }
 
@@ -50,8 +48,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
-        if ($user->status === 'inactive') {
-            return response()->json(['message' => 'Account is deactivated.'], 403);
+        if ($user->status !== 'active') {
+            return response()->json(['message' => 'Account is pending validation.'], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

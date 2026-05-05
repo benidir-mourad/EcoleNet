@@ -39,6 +39,9 @@ class DatabaseSeeder extends Seeder
         ];
         $sectionNames = ['Informatique', 'TPT', 'Laboratoire informatique', 'Laboratoire de logique'];
 
+        $this->call(ComposantsOrdinateurSeeder::class);
+        $this->call(ComposantsOrdinateurFilesSeeder::class);
+
         foreach ($classNames as $name) {
             $class = SchoolClass::create([
                 'name'      => $name,

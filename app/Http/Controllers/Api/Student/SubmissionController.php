@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Exercise;
 use App\Models\ExerciseSubmission;
 use App\Models\Resource;
@@ -12,8 +13,12 @@ use Illuminate\Support\Facades\Storage;
 
 class SubmissionController extends Controller
 {
+    use AuthorizesCourseAccess;
+
     public function store(Request $request, Exercise $exercise)
     {
+        $this->ensureStudentCanAccessExercise($request, $exercise);
+
         $student = $request->user();
 
         $data = $request->validate([
@@ -56,6 +61,8 @@ class SubmissionController extends Controller
 
     public function mySubmission(Request $request, Exercise $exercise)
     {
+        $this->ensureStudentCanAccessExercise($request, $exercise);
+
         $submission = ExerciseSubmission::where('exercise_id', $exercise->id)
             ->where('student_id', $request->user()->id)
             ->first();
@@ -65,6 +72,8 @@ class SubmissionController extends Controller
 
     public function storeForResource(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $exercise = $resource->exercise;
 
         if (!$exercise || $exercise->type !== 'file_upload') {
@@ -113,6 +122,8 @@ class SubmissionController extends Controller
 
     public function mySubmissionForResource(Request $request, Resource $resource)
     {
+        $this->ensureStudentCanAccessResource($request, $resource);
+
         $exercise = $resource->exercise;
 
         if (!$exercise) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Student;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\SchoolClass;
@@ -10,6 +11,8 @@ use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
+    use AuthorizesCourseAccess;
+
     public function availableClasses()
     {
         $classes = SchoolClass::where('is_active', true)->get();
@@ -44,13 +47,7 @@ class CourseController extends Controller
     {
         $student = $request->user();
 
-        $enrollment = Enrollment::where('student_id', $student->id)
-            ->where('status', 'approved')
-            ->first();
-
-        if (!$enrollment) {
-            return response()->json(['message' => 'Not enrolled.'], 403);
-        }
+        $this->ensureStudentCanAccessCourse($request, $course);
 
         $course->load([
             'chapters' => fn($q) => $q->orderBy('order')->orderBy('id'),
@@ -65,17 +62,7 @@ class CourseController extends Controller
     {
         $student = $request->user();
 
-        if (!$resource->is_visible) {
-            return response()->json(['message' => 'Resource not available.'], 403);
-        }
-
-        $enrollment = Enrollment::where('student_id', $student->id)
-            ->where('status', 'approved')
-            ->first();
-
-        if (!$enrollment) {
-            return response()->json(['message' => 'Not enrolled.'], 403);
-        }
+        $this->ensureStudentCanAccessResource($request, $resource);
 
         return response()->json(['resource' => $resource->load('qcmQuestions.options', 'exercise')]);
     }

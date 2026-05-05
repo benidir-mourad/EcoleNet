@@ -6,6 +6,7 @@ import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { GraduationCap, Code2, Terminal, Cpu, Wifi, Database } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { getApiErrorMessage } from '../../services/api';
 
 const schema = z.object({
   first_name: z.string().min(2, 'Prénom requis'),
@@ -43,7 +44,7 @@ export default function RegisterPage() {
       await registerUser(data);
       toast.success('Inscription réussie ! En attente de validation.');
     } catch (err) {
-      toast.error(err.response?.data?.message || "Erreur lors de l'inscription");
+      toast.error(getApiErrorMessage(err, "Erreur lors de l'inscription"));
     } finally {
       setLoading(false);
     }

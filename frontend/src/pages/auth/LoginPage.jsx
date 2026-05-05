@@ -6,6 +6,7 @@ import { z } from 'zod';
 import toast from 'react-hot-toast';
 import { Code2, Cpu, Terminal, Database, Wifi, Binary, GraduationCap } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { getApiErrorMessage } from '../../services/api';
 
 const schema = z.object({
   email: z.string().email('Email invalide'),
@@ -37,7 +38,7 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Identifiants incorrects');
+      toast.error(getApiErrorMessage(err, 'Identifiants incorrects'));
     } finally {
       setLoading(false);
     }

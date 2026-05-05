@@ -1,43 +1,45 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
 import ProtectedRoute from './components/layout/ProtectedRoute';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
 
-import TeacherDashboard from './pages/teacher/Dashboard';
-import ClassesPage from './pages/teacher/ClassesPage';
-import ClassDetailPage from './pages/teacher/ClassDetailPage';
-import CourseDetailPage from './pages/teacher/CourseDetailPage';
-import EnrollmentsPage from './pages/teacher/EnrollmentsPage';
-import TeacherMessagesPage from './pages/teacher/MessagesPage';
-import StatsPage from './pages/teacher/StatsPage';
-import QcmBuilderPage from './pages/teacher/QcmBuilderPage';
-import TeacherForumPage from './pages/teacher/ForumPage';
-import DragDropBuilderPage from './pages/teacher/DragDropBuilderPage';
-import SubmissionsPage from './pages/teacher/SubmissionsPage';
-import ExerciseEditorPage from './pages/teacher/ExerciseEditorPage';
-import LibraryPage from './pages/teacher/LibraryPage';
-import FillBlanksBuilderPage from './pages/teacher/FillBlanksBuilderPage';
-import OrderingBuilderPage from './pages/teacher/OrderingBuilderPage';
-import CodeEditorBuilderPage from './pages/teacher/CodeEditorBuilderPage';
-import TruthTableBuilderPage from './pages/teacher/TruthTableBuilderPage';
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 
-import StudentDashboard from './pages/student/Dashboard';
-import CoursePage from './pages/student/CoursePage';
-import QcmPage from './pages/student/QcmPage';
-import ProgressPage from './pages/student/ProgressPage';
-import StudentMessagesPage from './pages/student/MessagesPage';
-import StudentForumPage from './pages/student/ForumPage';
-import DragDropPage from './pages/student/DragDropPage';
-import ExercisePage from './pages/student/ExercisePage';
-import FillBlanksPage from './pages/student/FillBlanksPage';
-import OrderingPage from './pages/student/OrderingPage';
-import CodeEditorPage from './pages/student/CodeEditorPage';
-import TruthTablePage from './pages/student/TruthTablePage';
+const TeacherDashboard = lazy(() => import('./pages/teacher/Dashboard'));
+const ClassesPage = lazy(() => import('./pages/teacher/ClassesPage'));
+const ClassDetailPage = lazy(() => import('./pages/teacher/ClassDetailPage'));
+const CourseDetailPage = lazy(() => import('./pages/teacher/CourseDetailPage'));
+const EnrollmentsPage = lazy(() => import('./pages/teacher/EnrollmentsPage'));
+const TeacherMessagesPage = lazy(() => import('./pages/teacher/MessagesPage'));
+const StatsPage = lazy(() => import('./pages/teacher/StatsPage'));
+const QcmBuilderPage = lazy(() => import('./pages/teacher/QcmBuilderPage'));
+const TeacherForumPage = lazy(() => import('./pages/teacher/ForumPage'));
+const DragDropBuilderPage = lazy(() => import('./pages/teacher/DragDropBuilderPage'));
+const SubmissionsPage = lazy(() => import('./pages/teacher/SubmissionsPage'));
+const ExerciseEditorPage = lazy(() => import('./pages/teacher/ExerciseEditorPage'));
+const LibraryPage = lazy(() => import('./pages/teacher/LibraryPage'));
+const FillBlanksBuilderPage = lazy(() => import('./pages/teacher/FillBlanksBuilderPage'));
+const OrderingBuilderPage = lazy(() => import('./pages/teacher/OrderingBuilderPage'));
+const CodeEditorBuilderPage = lazy(() => import('./pages/teacher/CodeEditorBuilderPage'));
+const TruthTableBuilderPage = lazy(() => import('./pages/teacher/TruthTableBuilderPage'));
 
-import AdminDashboard from './pages/admin/Dashboard';
+const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
+const CoursePage = lazy(() => import('./pages/student/CoursePage'));
+const QcmPage = lazy(() => import('./pages/student/QcmPage'));
+const ProgressPage = lazy(() => import('./pages/student/ProgressPage'));
+const StudentMessagesPage = lazy(() => import('./pages/student/MessagesPage'));
+const StudentForumPage = lazy(() => import('./pages/student/ForumPage'));
+const DragDropPage = lazy(() => import('./pages/student/DragDropPage'));
+const ExercisePage = lazy(() => import('./pages/student/ExercisePage'));
+const FillBlanksPage = lazy(() => import('./pages/student/FillBlanksPage'));
+const OrderingPage = lazy(() => import('./pages/student/OrderingPage'));
+const CodeEditorPage = lazy(() => import('./pages/student/CodeEditorPage'));
+const TruthTablePage = lazy(() => import('./pages/student/TruthTablePage'));
+
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,10 +48,20 @@ const queryClient = new QueryClient({
 });
 
 function T(component) {
-  return <ProtectedRoute role="teacher">{component}</ProtectedRoute>;
+  return <ProtectedRoute role="teacher"><Page>{component}</Page></ProtectedRoute>;
 }
 function S(component) {
-  return <ProtectedRoute role="student">{component}</ProtectedRoute>;
+  return <ProtectedRoute role="student"><Page>{component}</Page></ProtectedRoute>;
+}
+function A(component) {
+  return <ProtectedRoute role="admin"><Page>{component}</Page></ProtectedRoute>;
+}
+function Page({ children }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      {children}
+    </Suspense>
+  );
 }
 
 export default function App() {
@@ -58,8 +70,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Public */}
-          <Route path="/login"    element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login"    element={<Page><LoginPage /></Page>} />
+          <Route path="/register" element={<Page><RegisterPage /></Page>} />
           <Route path="/"         element={<Navigate to="/login" replace />} />
 
           {/* Teacher */}
@@ -96,7 +108,7 @@ export default function App() {
           <Route path="/student/messages"                         element={S(<StudentMessagesPage />)} />
 
           {/* Admin */}
-          <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/dashboard" element={A(<AdminDashboard />)} />
 
           {/* Catch-all */}
           <Route path="*" element={<Navigate to="/login" replace />} />

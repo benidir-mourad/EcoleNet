@@ -202,7 +202,7 @@ export default function TeacherLayout({ children }) {
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* ── Sidebar ────────────────────────────────── */}
-      <aside className="w-64 bg-indigo-900 text-white flex flex-col"
+      <aside className="sticky top-0 h-screen w-64 bg-indigo-900 text-white flex flex-col"
         style={{
           backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)',
           backgroundSize: '18px 18px',

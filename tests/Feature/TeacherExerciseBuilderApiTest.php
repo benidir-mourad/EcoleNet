@@ -129,6 +129,34 @@ class TeacherExerciseBuilderApiTest extends TestCase
         ]);
     }
 
+    public function test_teacher_can_create_code_editor_with_advanced_sql_tests(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'is_visible' => true]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/code-editor", [
+                'title' => 'Jointure SQL',
+                'instructions' => 'Lister les etudiants inscrits dans une classe.',
+                'language' => 'sql',
+                'starter_code' => 'SELECT',
+                'auto_correct' => true,
+                'tests' => [
+                    ['label' => 'Condition classe', 'type' => 'sql_where_condition', 'value' => 'class_id', 'property' => '=', 'expected' => '3', 'points' => 1],
+                    ['label' => 'Tri nom', 'type' => 'sql_order_by', 'value' => 'name', 'expected' => 'ASC', 'points' => 1],
+                    ['label' => 'Jointure inscriptions', 'type' => 'sql_join', 'value' => 'enrollments', 'expected' => 'students.id = enrollments.student_id', 'points' => 2],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('exercise.type', 'code_editor')
+            ->assertJsonPath('exercise.auto_correct', true)
+            ->assertJsonPath('exercise.max_score', 4)
+            ->assertJsonPath('exercise.content.tests.0.type', 'sql_where_condition')
+            ->assertJsonPath('exercise.content.tests.1.type', 'sql_order_by')
+            ->assertJsonPath('exercise.content.tests.2.type', 'sql_join');
+    }
+
     public function test_teacher_can_enable_file_submission_and_correct_submission_with_notification(): void
     {
         $teacher = $this->user('teacher');

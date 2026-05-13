@@ -81,8 +81,8 @@ class CodeExercisePresets
                     ['label' => 'Interroge la table students', 'type' => 'sql_table', 'value' => 'students', 'points' => 1],
                     ['label' => 'Selectionne name', 'type' => 'sql_column', 'value' => 'name', 'points' => 1],
                     ['label' => 'Selectionne email', 'type' => 'sql_column', 'value' => 'email', 'points' => 1],
-                    ['label' => 'Filtre avec WHERE', 'type' => 'sql_clause', 'value' => 'WHERE', 'points' => 1],
-                    ['label' => 'Trie avec ORDER BY', 'type' => 'sql_clause', 'value' => 'ORDER BY', 'points' => 1],
+                    ['label' => 'Filtre les etudiants actifs', 'type' => 'sql_where_condition', 'value' => 'is_active', 'property' => '=', 'expected' => '1', 'points' => 1],
+                    ['label' => 'Trie par nom', 'type' => 'sql_order_by', 'value' => 'name', 'points' => 1],
                 ],
             ],
         ];

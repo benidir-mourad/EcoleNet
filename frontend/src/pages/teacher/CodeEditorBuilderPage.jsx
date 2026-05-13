@@ -293,6 +293,9 @@ export default function CodeEditorBuilderPage() {
                     <option value="sql_clause">Clause SQL</option>
                     <option value="sql_table">Table SQL</option>
                     <option value="sql_column">Colonne SQL</option>
+                    <option value="sql_where_condition">Condition WHERE SQL</option>
+                    <option value="sql_order_by">Tri ORDER BY SQL</option>
+                    <option value="sql_join">Jointure SQL</option>
                   </select>
                   <input
                     type="number"

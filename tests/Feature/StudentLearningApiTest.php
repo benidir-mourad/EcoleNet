@@ -164,10 +164,11 @@ class StudentLearningApiTest extends TestCase
                     ['label' => 'Clause SELECT', 'type' => 'sql_clause', 'value' => 'SELECT', 'points' => 1],
                     ['label' => 'Table students', 'type' => 'sql_table', 'value' => 'students', 'points' => 2],
                     ['label' => 'Colonne email', 'type' => 'sql_column', 'value' => 'email', 'points' => 1],
-                    ['label' => 'Clause ORDER BY', 'type' => 'sql_clause', 'value' => 'ORDER BY', 'points' => 1],
+                    ['label' => 'Condition actif', 'type' => 'sql_where_condition', 'value' => 'is_active', 'property' => '=', 'expected' => '1', 'points' => 1],
+                    ['label' => 'Tri par nom', 'type' => 'sql_order_by', 'value' => 'name', 'points' => 1],
                 ],
             ],
-            'max_score' => 5,
+            'max_score' => 6,
             'auto_correct' => true,
         ]);
         $this->enroll($student, $course->section->schoolClass);
@@ -178,7 +179,7 @@ class StudentLearningApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('submission.status', 'corrected')
-            ->assertJsonPath('submission.score', 5)
+            ->assertJsonPath('submission.score', 6)
             ->assertJsonPath('evaluation.percentage', 100)
             ->assertJsonPath('evaluation.results.1.passed', true);
 
@@ -186,7 +187,48 @@ class StudentLearningApiTest extends TestCase
             'exercise_id' => $exercise->id,
             'student_id' => $student->id,
             'status' => 'corrected',
-            'score' => 5,
+            'score' => 6,
+        ]);
+    }
+
+    public function test_student_sql_code_editor_submission_can_check_join_rule(): void
+    {
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($this->user('teacher'));
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'file_type' => 'code_editor']);
+        $exercise = Exercise::create([
+            'resource_id' => $resource->id,
+            'title' => 'Jointure SQL',
+            'type' => 'code_editor',
+            'content' => [
+                'language' => 'sql',
+                'starter_code' => '',
+                'tests' => [
+                    ['label' => 'Table principale', 'type' => 'sql_table', 'value' => 'students', 'points' => 1],
+                    ['label' => 'Joint la table enrollments', 'type' => 'sql_join', 'value' => 'enrollments', 'expected' => 'students.id = enrollments.student_id', 'points' => 2],
+                    ['label' => 'Filtre la classe', 'type' => 'sql_where_condition', 'value' => 'class_id', 'property' => '=', 'expected' => '3', 'points' => 1],
+                ],
+            ],
+            'max_score' => 4,
+            'auto_correct' => true,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $this->actingAs($student, 'sanctum')
+            ->postJson("/api/student/resources/{$resource->id}/submit", [
+                'content' => "SELECT students.name\nFROM students\nJOIN enrollments ON students.id = enrollments.student_id\nWHERE class_id = 3;",
+            ])
+            ->assertCreated()
+            ->assertJsonPath('submission.status', 'corrected')
+            ->assertJsonPath('submission.score', 4)
+            ->assertJsonPath('evaluation.percentage', 100)
+            ->assertJsonPath('evaluation.results.1.passed', true);
+
+        $this->assertDatabaseHas('exercise_submissions', [
+            'exercise_id' => $exercise->id,
+            'student_id' => $student->id,
+            'status' => 'corrected',
+            'score' => 4,
         ]);
     }
 }

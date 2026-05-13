@@ -374,7 +374,7 @@ class ExerciseController extends Controller
             'auto_correct'    => 'boolean',
             'tests'           => 'nullable|array',
             'tests.*.label'   => 'required_with:tests|string|max:200',
-            'tests.*.type'    => 'required_with:tests|string|in:contains,not_contains,regex,html_tag,html_attribute,css_selector,css_property,js_function,sql_clause,sql_table,sql_column',
+            'tests.*.type'    => 'required_with:tests|string|in:contains,not_contains,regex,html_tag,html_attribute,css_selector,css_property,js_function,sql_clause,sql_table,sql_column,sql_where_condition,sql_order_by,sql_join',
             'tests.*.value'   => 'nullable|string|max:1000',
             'tests.*.pattern' => 'nullable|string|max:1000',
             'tests.*.attribute' => 'nullable|string|max:100',

@@ -8,6 +8,7 @@ use App\Models\Exercise;
 use App\Models\ExerciseSubmission;
 use App\Models\Resource;
 use App\Models\StudentProgress;
+use App\Services\CodeAutoCorrectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -35,15 +36,18 @@ class SubmissionController extends Controller
             $filePath = $request->file('file')->store('submissions/' . $student->id, 'public');
         }
 
+        $evaluation = $this->evaluateIfNeeded($exercise, $data['content'] ?? '');
+
         $submission = ExerciseSubmission::updateOrCreate(
             ['exercise_id' => $exercise->id, 'student_id' => $student->id],
             [
                 'file_path'    => $filePath ?? null,
                 'content'      => $data['content'] ?? null,
-                'status'       => 'submitted',
+                'status'       => $evaluation ? 'corrected' : 'submitted',
                 'submitted_at' => now(),
-                'score'        => null,
-                'corrected_at' => null,
+                'score'        => $evaluation['score'] ?? null,
+                'teacher_comment' => $evaluation ? json_encode(['auto_correction' => $evaluation]) : null,
+                'corrected_at' => $evaluation ? now() : null,
             ]
         );
 
@@ -56,7 +60,7 @@ class SubmissionController extends Controller
             ]
         );
 
-        return response()->json(['submission' => $submission], 201);
+        return response()->json(['submission' => $submission, 'evaluation' => $evaluation], 201);
     }
 
     public function mySubmission(Request $request, Exercise $exercise)
@@ -76,7 +80,7 @@ class SubmissionController extends Controller
 
         $exercise = $resource->exercise;
 
-        if (!$exercise || $exercise->type !== 'file_upload') {
+        if (!$exercise || !in_array($exercise->type, ['file_upload', 'code_editor'], true)) {
             return response()->json(['message' => 'Aucun exercice de remise configuré pour cette ressource.'], 404);
         }
 
@@ -96,15 +100,18 @@ class SubmissionController extends Controller
             $filePath = $request->file('file')->store('submissions/' . $student->id, 'public');
         }
 
+        $evaluation = $this->evaluateIfNeeded($exercise, $data['content'] ?? '');
+
         $submission = ExerciseSubmission::updateOrCreate(
             ['exercise_id' => $exercise->id, 'student_id' => $student->id],
             [
                 'file_path'    => $filePath ?? null,
                 'content'      => $data['content'] ?? null,
-                'status'       => 'submitted',
+                'status'       => $evaluation ? 'corrected' : 'submitted',
                 'submitted_at' => now(),
-                'score'        => null,
-                'corrected_at' => null,
+                'score'        => $evaluation['score'] ?? null,
+                'teacher_comment' => $evaluation ? json_encode(['auto_correction' => $evaluation]) : null,
+                'corrected_at' => $evaluation ? now() : null,
             ]
         );
 
@@ -117,7 +124,7 @@ class SubmissionController extends Controller
             ]
         );
 
-        return response()->json(['submission' => $submission], 201);
+        return response()->json(['submission' => $submission, 'evaluation' => $evaluation], 201);
     }
 
     public function mySubmissionForResource(Request $request, Resource $resource)
@@ -135,5 +142,14 @@ class SubmissionController extends Controller
             ->first();
 
         return response()->json(['submission' => $submission, 'exercise' => $exercise]);
+    }
+
+    private function evaluateIfNeeded(Exercise $exercise, ?string $content): ?array
+    {
+        if ($exercise->type !== 'code_editor' || !$exercise->auto_correct || trim((string) $content) === '') {
+            return null;
+        }
+
+        return app(CodeAutoCorrectionService::class)->evaluate($exercise, $content);
     }
 }

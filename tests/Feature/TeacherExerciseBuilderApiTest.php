@@ -66,6 +66,32 @@ class TeacherExerciseBuilderApiTest extends TestCase
         ]);
     }
 
+    public function test_teacher_can_create_auto_corrected_code_editor_tests(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'is_visible' => true]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/code-editor", [
+                'title' => 'Carte HTML CSS',
+                'instructions' => 'Creer une carte.',
+                'language' => 'html',
+                'starter_code' => '<article class="card"></article>',
+                'auto_correct' => true,
+                'tests' => [
+                    ['label' => 'Balise article', 'type' => 'html_tag', 'value' => 'article', 'points' => 2],
+                    ['label' => 'Classe card', 'type' => 'contains', 'value' => 'class="card"', 'points' => 1],
+                    ['label' => 'Pas de style inline', 'type' => 'not_contains', 'value' => 'style=', 'points' => 1],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('exercise.type', 'code_editor')
+            ->assertJsonPath('exercise.auto_correct', true)
+            ->assertJsonPath('exercise.max_score', 4)
+            ->assertJsonCount(3, 'exercise.content.tests');
+    }
+
     public function test_teacher_can_enable_file_submission_and_correct_submission_with_notification(): void
     {
         $teacher = $this->user('teacher');

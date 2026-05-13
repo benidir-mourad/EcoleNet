@@ -26,6 +26,8 @@ export default function CodeEditorBuilderPage() {
   const [language, setLanguage]       = useState('javascript');
   const [starterCode, setStarterCode] = useState('');
   const [expectedOutput, setExpectedOutput] = useState('');
+  const [autoCorrect, setAutoCorrect] = useState(false);
+  const [tests, setTests] = useState([]);
   const [maxScore, setMaxScore]       = useState(20);
   const [deadline, setDeadline]       = useState('');
   const [initialized, setInitialized] = useState(false);
@@ -44,6 +46,8 @@ export default function CodeEditorBuilderPage() {
       setLanguage(ex.content?.language || 'javascript');
       setStarterCode(ex.content?.starter_code || '');
       setExpectedOutput(ex.content?.expected_output || '');
+      setAutoCorrect(Boolean(ex.auto_correct));
+      setTests(ex.content?.tests || []);
       setMaxScore(ex.max_score || 20);
       setDeadline(ex.deadline ? new Date(ex.deadline).toISOString().slice(0, 16) : '');
       setInitialized(true);
@@ -53,7 +57,11 @@ export default function CodeEditorBuilderPage() {
   const save = useMutation({
     mutationFn: () => api.post(`/teacher/resources/${resourceId}/code-editor`, {
       title, instructions, language, starter_code: starterCode,
-      expected_output: expectedOutput || null, max_score: Number(maxScore), deadline: deadline || null,
+      expected_output: expectedOutput || null,
+      auto_correct: autoCorrect,
+      tests: tests.filter(test => test.label?.trim()),
+      max_score: Number(maxScore),
+      deadline: deadline || null,
     }),
     onSuccess: () => { qc.invalidateQueries(['teacher-code-editor', resourceId]); toast.success('Exercice sauvegardé'); },
     onError: () => toast.error('Erreur lors de la sauvegarde'),
@@ -80,6 +88,15 @@ export default function CodeEditorBuilderPage() {
   };
 
   const exercise = data?.exercise;
+  const addTest = () => setTests(items => [...items, {
+    label: '',
+    type: 'contains',
+    value: '',
+    points: 1,
+    failure_feedback: '',
+  }]);
+  const updateTest = (index, patch) => setTests(items => items.map((item, i) => i === index ? { ...item, ...patch } : item));
+  const removeTest = (index) => setTests(items => items.filter((_, i) => i !== index));
 
   return (
     <TeacherLayout>
@@ -180,6 +197,108 @@ export default function CodeEditorBuilderPage() {
           <textarea value={expectedOutput} onChange={e => setExpectedOutput(e.target.value)} rows={4}
             className="w-full border rounded-xl px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Ex : [1, 2, 3, 4, 5]&#10;true&#10;false" />
+        </div>
+
+        {/* Auto correction */}
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="font-semibold text-gray-800">Auto-correction</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Ajoutez des règles simples pour HTML, CSS et JavaScript. Le code n'est pas exécuté côté serveur.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={autoCorrect}
+                onChange={e => setAutoCorrect(e.target.checked)}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              Activer
+            </label>
+          </div>
+
+          <div className="space-y-3">
+            {tests.map((test, index) => (
+              <div key={index} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <div className="grid gap-3 lg:grid-cols-[1fr_180px_120px_auto]">
+                  <input
+                    value={test.label || ''}
+                    onChange={e => updateTest(index, { label: e.target.value })}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Nom du test"
+                  />
+                  <select
+                    value={test.type || 'contains'}
+                    onChange={e => updateTest(index, { type: e.target.value })}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="contains">Contient</option>
+                    <option value="not_contains">Ne contient pas</option>
+                    <option value="regex">Regex</option>
+                    <option value="html_tag">Balise HTML</option>
+                    <option value="html_attribute">Attribut HTML</option>
+                    <option value="css_selector">Sélecteur CSS</option>
+                    <option value="css_property">Propriété CSS</option>
+                    <option value="js_function">Fonction JS</option>
+                  </select>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={test.points || 1}
+                    onChange={e => updateTest(index, { points: Number(e.target.value) })}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Points"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeTest(index)}
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Retirer
+                  </button>
+                </div>
+
+                <div className="grid gap-3 mt-3 lg:grid-cols-3">
+                  <input
+                    value={test.value || ''}
+                    onChange={e => updateTest(index, { value: e.target.value })}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Valeur, balise, sélecteur ou fonction"
+                  />
+                  <input
+                    value={test.property || ''}
+                    onChange={e => updateTest(index, { property: e.target.value })}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Propriété CSS ou attribut HTML"
+                  />
+                  <input
+                    value={test.expected || ''}
+                    onChange={e => updateTest(index, { expected: e.target.value })}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Valeur attendue CSS"
+                  />
+                </div>
+
+                <input
+                  value={test.failure_feedback || ''}
+                  onChange={e => updateTest(index, { failure_feedback: e.target.value })}
+                  className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Feedback si le test échoue"
+                />
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={addTest}
+            className="mt-4 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+          >
+            Ajouter un test
+          </button>
         </div>
       </div>
     </TeacherLayout>

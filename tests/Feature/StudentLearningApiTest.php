@@ -106,4 +106,45 @@ class StudentLearningApiTest extends TestCase
             'content' => 'Mon rendu',
         ]);
     }
+
+    public function test_student_code_editor_submission_can_be_auto_corrected(): void
+    {
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($this->user('teacher'));
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'file_type' => 'code_editor']);
+        $exercise = Exercise::create([
+            'resource_id' => $resource->id,
+            'title' => 'Fonctions JS',
+            'type' => 'code_editor',
+            'content' => [
+                'language' => 'javascript',
+                'starter_code' => '',
+                'tests' => [
+                    ['label' => 'Fonction addition', 'type' => 'js_function', 'value' => 'addition', 'points' => 2],
+                    ['label' => 'Retourne une somme', 'type' => 'contains', 'value' => 'return a + b', 'points' => 3],
+                    ['label' => 'Pas de alert', 'type' => 'not_contains', 'value' => 'alert(', 'points' => 1],
+                ],
+            ],
+            'max_score' => 6,
+            'auto_correct' => true,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $this->actingAs($student, 'sanctum')
+            ->postJson("/api/student/resources/{$resource->id}/submit", [
+                'content' => 'function addition(a, b) { return a + b; }',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('submission.status', 'corrected')
+            ->assertJsonPath('submission.score', 6)
+            ->assertJsonPath('evaluation.percentage', 100)
+            ->assertJsonPath('evaluation.results.0.passed', true);
+
+        $this->assertDatabaseHas('exercise_submissions', [
+            'exercise_id' => $exercise->id,
+            'student_id' => $student->id,
+            'status' => 'corrected',
+            'score' => 6,
+        ]);
+    }
 }

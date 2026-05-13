@@ -363,9 +363,28 @@ class ExerciseController extends Controller
             'language'        => 'required|string|in:javascript,html,css,php,sql,python,text',
             'starter_code'    => 'nullable|string',
             'expected_output' => 'nullable|string',
+            'auto_correct'    => 'boolean',
+            'tests'           => 'nullable|array',
+            'tests.*.label'   => 'required_with:tests|string|max:200',
+            'tests.*.type'    => 'required_with:tests|string|in:contains,not_contains,regex,html_tag,html_attribute,css_selector,css_property,js_function',
+            'tests.*.value'   => 'nullable|string|max:1000',
+            'tests.*.pattern' => 'nullable|string|max:1000',
+            'tests.*.attribute' => 'nullable|string|max:100',
+            'tests.*.selector' => 'nullable|string|max:200',
+            'tests.*.property' => 'nullable|string|max:100',
+            'tests.*.expected' => 'nullable|string|max:500',
+            'tests.*.points'  => 'nullable|integer|min:1|max:100',
+            'tests.*.case_sensitive' => 'boolean',
+            'tests.*.success_feedback' => 'nullable|string|max:500',
+            'tests.*.failure_feedback' => 'nullable|string|max:500',
             'max_score'       => 'nullable|integer|min:1|max:100',
             'deadline'        => 'nullable|date',
         ]);
+
+        $tests = collect($data['tests'] ?? [])
+            ->filter(fn ($test) => !empty($test['label']) && (!empty($test['value']) || !empty($test['pattern']) || !empty($test['property'])))
+            ->values()
+            ->all();
 
         $exercise = Exercise::updateOrCreate(
             ['resource_id' => $resource->id],
@@ -377,9 +396,10 @@ class ExerciseController extends Controller
                     'language'        => $data['language'],
                     'starter_code'    => $data['starter_code'] ?? '',
                     'expected_output' => $data['expected_output'] ?? null,
+                    'tests'           => $tests,
                 ],
-                'max_score'    => $data['max_score'] ?? 20,
-                'auto_correct' => false,
+                'max_score'    => count($tests) > 0 ? collect($tests)->sum(fn ($test) => max((int) ($test['points'] ?? 1), 1)) : ($data['max_score'] ?? 20),
+                'auto_correct' => (bool) ($data['auto_correct'] ?? false) && count($tests) > 0,
                 'deadline'     => $data['deadline'] ?? null,
             ]
         );

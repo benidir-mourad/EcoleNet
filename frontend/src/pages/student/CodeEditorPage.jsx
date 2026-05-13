@@ -11,6 +11,7 @@ export default function CodeEditorPage() {
   const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [evaluation, setEvaluation] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -34,13 +35,18 @@ export default function CodeEditorPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
     },
-    onSuccess: () => { setSubmitted(true); toast.success('Code remis avec succès !'); },
+    onSuccess: (response) => {
+      setSubmitted(true);
+      setEvaluation(response.data?.evaluation || null);
+      toast.success(response.data?.evaluation ? 'Code corrigé automatiquement !' : 'Code remis avec succès !');
+    },
     onError: () => toast.error('Erreur lors de la remise'),
   });
 
   const exercise = data?.exercise;
   const language = exercise?.content?.language || 'text';
   const expectedOutput = exercise?.content?.expected_output;
+  const autoCorrect = Boolean(exercise?.auto_correct);
   const templateFileName = exercise?.template_file_name;
   const templateFilePath = exercise?.template_file_path;
   const templateUrl = templateFilePath
@@ -99,9 +105,14 @@ export default function CodeEditorPage() {
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-gray-800">Votre code</h2>
-              {submitted && (
+              {submitted && !evaluation && (
                 <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
                   <CheckCircle size={15} /> Remis
+                </div>
+              )}
+              {evaluation && (
+                <div className="flex items-center gap-1.5 text-emerald-600 text-sm font-medium">
+                  <CheckCircle size={15} /> {evaluation.score} / {evaluation.max_score}
                 </div>
               )}
             </div>
@@ -126,6 +137,35 @@ export default function CodeEditorPage() {
             </div>
           )}
 
+          {autoCorrect && !submitted && (
+            <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+              <p className="text-sm font-medium text-emerald-800">Correction automatique activée</p>
+              <p className="text-xs text-emerald-700 mt-1">Tu recevras un score et un feedback dès la remise.</p>
+            </div>
+          )}
+
+          {evaluation && (
+            <div className="bg-white rounded-xl p-5 border border-emerald-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-gray-800">Résultat automatique</h2>
+                <span className="text-sm font-bold text-emerald-700">{evaluation.percentage}%</span>
+              </div>
+              <div className="space-y-2">
+                {evaluation.results?.map(result => (
+                  <div key={result.index} className={`rounded-lg border p-3 ${result.passed ? 'border-emerald-100 bg-emerald-50' : 'border-red-100 bg-red-50'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-gray-800">{result.label}</p>
+                      <span className={result.passed ? 'text-emerald-700 text-sm font-semibold' : 'text-red-700 text-sm font-semibold'}>
+                        {result.earned} / {result.points}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">{result.feedback}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!submitted ? (
             <button
               onClick={() => submit.mutate()}
@@ -138,7 +178,9 @@ export default function CodeEditorPage() {
             <div className="bg-green-50 rounded-xl p-5 border border-green-200 text-center">
               <CheckCircle size={24} className="text-green-600 mx-auto mb-2" />
               <p className="font-semibold text-green-800">Code remis avec succès !</p>
-              <p className="text-sm text-green-600 mt-1">Votre enseignant pourra consulter et noter votre travail.</p>
+              <p className="text-sm text-green-600 mt-1">
+                {evaluation ? 'La correction automatique est disponible ci-dessus.' : 'Votre enseignant pourra consulter et noter votre travail.'}
+              </p>
             </div>
           )}
         </div>

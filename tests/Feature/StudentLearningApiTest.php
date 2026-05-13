@@ -147,4 +147,46 @@ class StudentLearningApiTest extends TestCase
             'score' => 6,
         ]);
     }
+
+    public function test_student_sql_code_editor_submission_uses_sql_specific_rules(): void
+    {
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($this->user('teacher'));
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'file_type' => 'code_editor']);
+        $exercise = Exercise::create([
+            'resource_id' => $resource->id,
+            'title' => 'Requete SQL',
+            'type' => 'code_editor',
+            'content' => [
+                'language' => 'sql',
+                'starter_code' => '',
+                'tests' => [
+                    ['label' => 'Clause SELECT', 'type' => 'sql_clause', 'value' => 'SELECT', 'points' => 1],
+                    ['label' => 'Table students', 'type' => 'sql_table', 'value' => 'students', 'points' => 2],
+                    ['label' => 'Colonne email', 'type' => 'sql_column', 'value' => 'email', 'points' => 1],
+                    ['label' => 'Clause ORDER BY', 'type' => 'sql_clause', 'value' => 'ORDER BY', 'points' => 1],
+                ],
+            ],
+            'max_score' => 5,
+            'auto_correct' => true,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $this->actingAs($student, 'sanctum')
+            ->postJson("/api/student/resources/{$resource->id}/submit", [
+                'content' => "SELECT name, email\nFROM students\nWHERE is_active = 1\nORDER BY name;",
+            ])
+            ->assertCreated()
+            ->assertJsonPath('submission.status', 'corrected')
+            ->assertJsonPath('submission.score', 5)
+            ->assertJsonPath('evaluation.percentage', 100)
+            ->assertJsonPath('evaluation.results.1.passed', true);
+
+        $this->assertDatabaseHas('exercise_submissions', [
+            'exercise_id' => $exercise->id,
+            'student_id' => $student->id,
+            'status' => 'corrected',
+            'score' => 5,
+        ]);
+    }
 }

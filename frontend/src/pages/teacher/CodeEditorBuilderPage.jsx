@@ -290,6 +290,9 @@ export default function CodeEditorBuilderPage() {
                     <option value="css_selector">Sélecteur CSS</option>
                     <option value="css_property">Propriété CSS</option>
                     <option value="js_function">Fonction JS</option>
+                    <option value="sql_clause">Clause SQL</option>
+                    <option value="sql_table">Table SQL</option>
+                    <option value="sql_column">Colonne SQL</option>
                   </select>
                   <input
                     type="number"

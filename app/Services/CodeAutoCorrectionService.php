@@ -54,6 +54,9 @@ class CodeAutoCorrectionService
             'css_property' => $this->hasCssProperty($code, $test),
             'js_function' => $this->matchesRegex($code, 'function\s+' . preg_quote($test['value'] ?? '', '/') . '\s*\(', 'i')
                 || $this->matchesRegex($code, '(const|let|var)\s+' . preg_quote($test['value'] ?? '', '/') . '\s*=', 'i'),
+            'sql_clause' => $this->hasSqlClause($code, $test),
+            'sql_table' => $this->hasSqlTable($code, $test),
+            'sql_column' => $this->hasSqlColumn($code, $test),
             default => $this->contains($code, $test),
         };
     }
@@ -97,6 +100,52 @@ class CodeAutoCorrectionService
         $valuePattern = $expected !== '' ? '\s*:\s*' . preg_quote($expected, '/') : '\s*:';
 
         return $this->matchesRegex($code, $selector . '\s*\{[^}]*\b' . $property . $valuePattern, 'is');
+    }
+
+    private function hasSqlClause(string $code, array $test): bool
+    {
+        $clause = $this->normalizeSqlName($test['value'] ?? '');
+
+        if ($clause === '') {
+            return false;
+        }
+
+        return $this->matchesRegex($this->normalizeSql($code), '\b' . preg_quote($clause, '/') . '\b', 'i');
+    }
+
+    private function hasSqlTable(string $code, array $test): bool
+    {
+        $table = $this->normalizeSqlName($test['value'] ?? '');
+
+        if ($table === '') {
+            return false;
+        }
+
+        return $this->matchesRegex($this->normalizeSql($code), '\b(from|join|into|update)\s+`?' . preg_quote($table, '/') . '`?\b', 'i');
+    }
+
+    private function hasSqlColumn(string $code, array $test): bool
+    {
+        $column = $this->normalizeSqlName($test['value'] ?? '');
+
+        if ($column === '') {
+            return false;
+        }
+
+        return $this->matchesRegex($this->normalizeSql($code), '(^|[\s,(`.])`?' . preg_quote($column, '/') . '`?($|[\s,).=])', 'i');
+    }
+
+    private function normalizeSql(string $code): string
+    {
+        $withoutLineComments = preg_replace('/--.*$/m', ' ', $code) ?? $code;
+        $withoutBlockComments = preg_replace('/\/\*.*?\*\//s', ' ', $withoutLineComments) ?? $withoutLineComments;
+
+        return preg_replace('/\s+/', ' ', trim($withoutBlockComments)) ?? trim($withoutBlockComments);
+    }
+
+    private function normalizeSqlName(string $name): string
+    {
+        return trim(str_replace(['`', '"', '[', ']'], '', $name));
     }
 
     private function matchesRegex(string $code, string $pattern, string $flags = ''): bool

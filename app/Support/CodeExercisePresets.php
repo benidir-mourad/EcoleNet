@@ -77,11 +77,12 @@ class CodeExercisePresets
                 'starter_code' => "-- Table: students(id, name, email, is_active)\nSELECT\n  -- Completez la requete\n",
                 'expected_output' => "Colonnes attendues: name, email. Filtre: is_active = 1. Tri: name.",
                 'tests' => [
-                    ['label' => 'Utilise SELECT', 'type' => 'contains', 'value' => 'SELECT', 'points' => 1],
-                    ['label' => 'Selectionne name', 'type' => 'contains', 'value' => 'name', 'points' => 1],
-                    ['label' => 'Selectionne email', 'type' => 'contains', 'value' => 'email', 'points' => 1],
-                    ['label' => 'Filtre avec WHERE', 'type' => 'contains', 'value' => 'WHERE', 'points' => 1],
-                    ['label' => 'Trie avec ORDER BY', 'type' => 'contains', 'value' => 'ORDER BY', 'points' => 1],
+                    ['label' => 'Utilise SELECT', 'type' => 'sql_clause', 'value' => 'SELECT', 'points' => 1],
+                    ['label' => 'Interroge la table students', 'type' => 'sql_table', 'value' => 'students', 'points' => 1],
+                    ['label' => 'Selectionne name', 'type' => 'sql_column', 'value' => 'name', 'points' => 1],
+                    ['label' => 'Selectionne email', 'type' => 'sql_column', 'value' => 'email', 'points' => 1],
+                    ['label' => 'Filtre avec WHERE', 'type' => 'sql_clause', 'value' => 'WHERE', 'points' => 1],
+                    ['label' => 'Trie avec ORDER BY', 'type' => 'sql_clause', 'value' => 'ORDER BY', 'points' => 1],
                 ],
             ],
         ];

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\Enrollment;
 use App\Models\SchoolClass;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class EnrollmentController extends Controller
@@ -31,6 +32,14 @@ class EnrollmentController extends Controller
         if ($enrollment->student->status === 'pending') {
             $enrollment->student->update(['status' => 'active']);
         }
+
+        app(NotificationService::class)->create(
+            $enrollment->student,
+            'enrollment_approved',
+            'Inscription validée',
+            "Ton inscription à {$enrollment->schoolClass->name} a été validée.",
+            ['class_id' => $enrollment->class_id, 'url' => '/student/dashboard']
+        );
 
         return response()->json(['enrollment' => $enrollment->fresh()->load('student', 'schoolClass')]);
     }

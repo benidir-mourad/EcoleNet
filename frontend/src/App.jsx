@@ -40,6 +40,7 @@ const CodeEditorPage = lazy(() => import('./pages/student/CodeEditorPage'));
 const TruthTablePage = lazy(() => import('./pages/student/TruthTablePage'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="/teacher/resources/:resourceId/code-editor"    element={T(<CodeEditorBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/truth-table"    element={T(<TruthTableBuilderPage />)} />
           <Route path="/teacher/library"                              element={T(<LibraryPage />)} />
+          <Route path="/teacher/notifications"                         element={T(<NotificationsPage color="indigo" />)} />
 
           {/* Student */}
           <Route path="/student/dashboard"                        element={S(<StudentDashboard />)} />
@@ -106,6 +108,7 @@ export default function App() {
           <Route path="/student/resources/:resourceId/truth-table"  element={S(<TruthTablePage />)} />
           <Route path="/student/progress"                         element={S(<ProgressPage />)} />
           <Route path="/student/messages"                         element={S(<StudentMessagesPage />)} />
+          <Route path="/student/notifications"                    element={S(<NotificationsPage color="emerald" />)} />
 
           {/* Admin */}
           <Route path="/admin/dashboard" element={A(<AdminDashboard />)} />

@@ -36,7 +36,7 @@ class CourseController extends Controller
             ->with('section', 'resources')
             ->get()
             ->map(function ($course) {
-                $course->resources = $course->resources->where('is_visible', true)->values();
+                $course->setRelation('resources', $course->resources->where('is_visible', true)->values());
                 return $course;
             });
 

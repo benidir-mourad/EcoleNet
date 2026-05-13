@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
@@ -55,6 +56,14 @@ class MessageController extends Controller
             'receiver_id' => $user->id,
             'content'     => $data['content'],
         ]);
+
+        app(NotificationService::class)->create(
+            $user,
+            'teacher_message',
+            'Nouveau message',
+            "{$request->user()->full_name} t'a envoyé un message.",
+            ['message_id' => $message->id, 'url' => '/student/messages']
+        );
 
         return response()->json(['message' => $message->load('sender', 'receiver')], 201);
     }

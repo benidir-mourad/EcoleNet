@@ -13,6 +13,7 @@ import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
+import NotificationsMenu from './NotificationsMenu';
 
 const nav = [
   { to: '/teacher/dashboard',   icon: LayoutDashboard, label: 'Tableau de bord' },
@@ -256,6 +257,7 @@ export default function TeacherLayout({ children }) {
               <Icon size={18} /> {label}
             </Link>
           ))}
+          <NotificationsMenu color="indigo" />
         </nav>
 
         {/* Circuit + Logout */}

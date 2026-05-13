@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Teacher\ClassController;
 use App\Http\Controllers\Api\Teacher\SectionController;
 use App\Http\Controllers\Api\Teacher\CourseController;
@@ -31,6 +32,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me',                [AuthController::class, 'me']);
     Route::put('/profile',           [AuthController::class, 'updateProfile']);
     Route::post('/profile/avatar',   [AuthController::class, 'uploadAvatar']);
+    Route::get('/notifications',      [NotificationController::class, 'index']);
+    Route::get('/notifications/preferences', [NotificationController::class, 'preferences']);
+    Route::put('/notifications/preferences', [NotificationController::class, 'updatePreferences']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::patch('/notifications/{notification}/unread', [NotificationController::class, 'markUnread']);
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
 
     // ── Teacher routes ────────────────────────────────────────────────────────
     Route::middleware('role:teacher,admin')->prefix('teacher')->group(function () {

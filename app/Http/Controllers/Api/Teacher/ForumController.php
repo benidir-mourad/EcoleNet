@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Course;
 use App\Models\ForumPost;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ForumController extends Controller
@@ -42,6 +43,16 @@ class ForumController extends Controller
             'content'   => $data['content'],
         ]);
 
+        if ($course->section) {
+            app(NotificationService::class)->notifyCourseStudentsForCourse(
+                $course,
+                'forum_post',
+                'Nouveau sujet forum',
+                "Un nouveau sujet a été publié dans {$course->name}.",
+                ['course_id' => $course->id, 'post_id' => $post->id, 'url' => "/student/courses/{$course->id}/forum"]
+            );
+        }
+
         return response()->json(['post' => $post->load('user')], 201);
     }
 
@@ -67,6 +78,16 @@ class ForumController extends Controller
             'parent_id' => $post->id,
             'content'   => $data['content'],
         ]);
+
+        if ($post->user_id !== $request->user()->id) {
+            app(NotificationService::class)->create(
+                $post->user,
+                'forum_reply',
+                'Réponse forum',
+                "{$request->user()->full_name} a répondu à ton sujet.",
+                ['course_id' => $post->course_id, 'post_id' => $post->id, 'url' => "/student/courses/{$post->course_id}/forum"]
+            );
+        }
 
         return response()->json(['reply' => $reply->load('user')], 201);
     }

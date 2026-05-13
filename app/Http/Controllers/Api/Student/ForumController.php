@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\ForumPost;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ForumController extends Controller
@@ -52,6 +53,16 @@ class ForumController extends Controller
             'content'   => $data['content'],
         ]);
 
+        if ($course->teacher) {
+            app(NotificationService::class)->create(
+                $course->teacher,
+                'forum_post',
+                'Nouveau sujet forum',
+                "{$request->user()->full_name} a publié un sujet dans {$course->name}.",
+                ['course_id' => $course->id, 'post_id' => $post->id, 'url' => "/teacher/courses/{$course->id}/forum"]
+            );
+        }
+
         return response()->json(['post' => $post->load('user')], 201);
     }
 
@@ -73,6 +84,16 @@ class ForumController extends Controller
             'parent_id' => $post->id,
             'content'   => $data['content'],
         ]);
+
+        if ($post->user_id !== $request->user()->id) {
+            app(NotificationService::class)->create(
+                $post->user,
+                'forum_reply',
+                'Réponse forum',
+                "{$request->user()->full_name} a répondu à ton sujet.",
+                ['course_id' => $post->course_id, 'post_id' => $post->id, 'url' => "/student/courses/{$post->course_id}/forum"]
+            );
+        }
 
         return response()->json(['reply' => $reply->load('user')], 201);
     }

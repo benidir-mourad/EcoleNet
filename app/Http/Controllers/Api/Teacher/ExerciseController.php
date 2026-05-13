@@ -9,6 +9,7 @@ use App\Models\ExerciseSubmission;
 use App\Models\QcmOption;
 use App\Models\QcmQuestion;
 use App\Models\Resource;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -102,6 +103,7 @@ class ExerciseController extends Controller
         );
 
         $resource->update(['file_type' => 'drag_drop']);
+        $this->notifyNewExercise($resource, $exercise);
 
         return response()->json(['exercise' => $exercise]);
     }
@@ -195,6 +197,7 @@ class ExerciseController extends Controller
         );
 
         $resource->update(['file_type' => 'fill_blanks']);
+        $this->notifyNewExercise($resource, $exercise);
 
         return response()->json(['exercise' => $exercise]);
     }
@@ -287,6 +290,7 @@ class ExerciseController extends Controller
         );
 
         $resource->update(['file_type' => 'ordering']);
+        $this->notifyNewExercise($resource, $exercise);
 
         return response()->json(['exercise' => $exercise]);
     }
@@ -381,6 +385,7 @@ class ExerciseController extends Controller
         );
 
         $resource->update(['file_type' => 'code_editor']);
+        $this->notifyNewExercise($resource, $exercise);
 
         return response()->json(['exercise' => $exercise]);
     }
@@ -431,6 +436,7 @@ class ExerciseController extends Controller
         );
 
         $resource->update(['file_type' => 'truth_table']);
+        $this->notifyNewExercise($resource, $exercise);
 
         return response()->json(['exercise' => $exercise]);
     }
@@ -565,6 +571,7 @@ class ExerciseController extends Controller
         );
 
         $resource->update(['file_type' => 'file_upload']);
+        $this->notifyNewExercise($resource, $exercise);
 
         return response()->json(['exercise' => $exercise]);
     }
@@ -607,6 +614,40 @@ class ExerciseController extends Controller
             'corrected_at'    => now(),
         ]);
 
+        app(NotificationService::class)->create(
+            $submission->student,
+            'correction_published',
+            'Correction publiée',
+            "La correction de {$submission->exercise->title} est disponible.",
+            [
+                'exercise_id' => $submission->exercise_id,
+                'resource_id' => $submission->exercise->resource_id,
+                'course_id'   => $submission->exercise->resource->course_id,
+                'url'         => "/student/courses/{$submission->exercise->resource->course_id}",
+            ]
+        );
+
         return response()->json(['submission' => $submission->fresh()->load('student')]);
+    }
+
+    private function notifyNewExercise(Resource $resource, Exercise $exercise): void
+    {
+        if (!$exercise->wasRecentlyCreated || !$resource->is_visible) {
+            return;
+        }
+
+        app(NotificationService::class)->notifyCourseStudents(
+            $resource,
+            'new_assignment',
+            'Nouveau devoir',
+            "Un nouveau devoir est disponible : {$exercise->title}.",
+            [
+                'exercise_id' => $exercise->id,
+                'resource_id' => $resource->id,
+                'course_id'   => $resource->course_id,
+                'deadline'    => $exercise->deadline,
+                'url'         => "/student/courses/{$resource->course_id}",
+            ]
+        );
     }
 }

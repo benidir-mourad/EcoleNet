@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,7 +14,11 @@ return new class extends Migration
             $table->foreignId('resource_id')->constrained('resources')->cascadeOnDelete();
             $table->string('title');
             $table->text('instructions')->nullable();
-            $table->enum('type', ['file_upload', 'qcm', 'drag_drop', 'excel_interactive']);
+            if (DB::connection()->getDriverName() === 'sqlite') {
+                $table->string('type');
+            } else {
+                $table->enum('type', ['file_upload', 'qcm', 'drag_drop', 'excel_interactive']);
+            }
             $table->unsignedInteger('max_score')->default(20);
             $table->boolean('auto_correct')->default(false);
             $table->timestamp('deadline')->nullable();

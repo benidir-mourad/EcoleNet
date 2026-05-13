@@ -16,6 +16,81 @@ const LANGUAGES = [
   { value: 'text',       label: 'Texte libre' },
 ];
 
+const TEST_FIELD_CONFIG = {
+  contains: {
+    value: 'Texte attendu',
+    valuePlaceholder: 'Ex : return total',
+  },
+  not_contains: {
+    value: 'Texte interdit',
+    valuePlaceholder: 'Ex : alert(',
+  },
+  regex: {
+    value: 'Expression régulière',
+    valuePlaceholder: 'Ex : (for|while|reduce)',
+  },
+  html_tag: {
+    value: 'Balise HTML',
+    valuePlaceholder: 'Ex : article',
+  },
+  html_attribute: {
+    value: 'Balise HTML',
+    valuePlaceholder: 'Ex : img',
+    property: 'Attribut attendu',
+    propertyPlaceholder: 'Ex : alt',
+  },
+  css_selector: {
+    value: 'Sélecteur CSS',
+    valuePlaceholder: 'Ex : .card',
+  },
+  css_property: {
+    value: 'Sélecteur CSS',
+    valuePlaceholder: 'Ex : .card',
+    property: 'Propriété CSS',
+    propertyPlaceholder: 'Ex : display',
+    expected: 'Valeur attendue',
+    expectedPlaceholder: 'Ex : flex',
+  },
+  js_function: {
+    value: 'Nom de fonction',
+    valuePlaceholder: 'Ex : totalNotes',
+  },
+  sql_clause: {
+    value: 'Clause SQL',
+    valuePlaceholder: 'Ex : SELECT, WHERE, GROUP BY',
+  },
+  sql_table: {
+    value: 'Table SQL',
+    valuePlaceholder: 'Ex : students',
+  },
+  sql_column: {
+    value: 'Colonne SQL',
+    valuePlaceholder: 'Ex : email',
+  },
+  sql_where_condition: {
+    value: 'Colonne',
+    valuePlaceholder: 'Ex : is_active',
+    property: 'Opérateur',
+    propertyPlaceholder: 'Ex : =, >, LIKE',
+    expected: 'Valeur attendue',
+    expectedPlaceholder: 'Ex : 1',
+  },
+  sql_order_by: {
+    value: 'Colonne de tri',
+    valuePlaceholder: 'Ex : name',
+    expected: 'Sens du tri',
+    expectedPlaceholder: 'ASC ou DESC',
+  },
+  sql_join: {
+    value: 'Table jointe',
+    valuePlaceholder: 'Ex : enrollments',
+    expected: 'Condition ON attendue',
+    expectedPlaceholder: 'Ex : students.id = enrollments.student_id',
+  },
+};
+
+const getTestFieldConfig = (type) => TEST_FIELD_CONFIG[type] || TEST_FIELD_CONFIG.contains;
+
 export default function CodeEditorBuilderPage() {
   const { resourceId } = useParams();
   const navigate = useNavigate();
@@ -268,7 +343,10 @@ export default function CodeEditorBuilderPage() {
           </div>
 
           <div className="space-y-3">
-            {tests.map((test, index) => (
+            {tests.map((test, index) => {
+              const fieldConfig = getTestFieldConfig(test.type || 'contains');
+
+              return (
               <div key={index} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                 <div className="grid gap-3 lg:grid-cols-[1fr_180px_120px_auto]">
                   <input
@@ -279,7 +357,7 @@ export default function CodeEditorBuilderPage() {
                   />
                   <select
                     value={test.type || 'contains'}
-                    onChange={e => updateTest(index, { type: e.target.value })}
+                    onChange={e => updateTest(index, { type: e.target.value, property: '', expected: '' })}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="contains">Contient</option>
@@ -315,24 +393,29 @@ export default function CodeEditorBuilderPage() {
                   </button>
                 </div>
 
+                <div className="mt-3 grid gap-3 text-xs font-medium text-gray-600 lg:grid-cols-3">
+                  <span>{fieldConfig.value}</span>
+                  {fieldConfig.property ? <span>{fieldConfig.property}</span> : <span className="hidden lg:block" />}
+                  {fieldConfig.expected ? <span>{fieldConfig.expected}</span> : <span className="hidden lg:block" />}
+                </div>
                 <div className="grid gap-3 mt-3 lg:grid-cols-3">
                   <input
                     value={test.value || ''}
                     onChange={e => updateTest(index, { value: e.target.value })}
                     className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Valeur, balise, sélecteur ou fonction"
+                    placeholder={fieldConfig.valuePlaceholder}
                   />
                   <input
                     value={test.property || ''}
                     onChange={e => updateTest(index, { property: e.target.value })}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Propriété CSS ou attribut HTML"
+                    className={`${fieldConfig.property ? '' : 'hidden'} rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    placeholder={fieldConfig.propertyPlaceholder || ''}
                   />
                   <input
                     value={test.expected || ''}
                     onChange={e => updateTest(index, { expected: e.target.value })}
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Valeur attendue CSS"
+                    className={`${fieldConfig.expected ? '' : 'hidden'} rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                    placeholder={fieldConfig.expectedPlaceholder || ''}
                   />
                 </div>
 
@@ -343,7 +426,8 @@ export default function CodeEditorBuilderPage() {
                   placeholder="Feedback si le test échoue"
                 />
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <button

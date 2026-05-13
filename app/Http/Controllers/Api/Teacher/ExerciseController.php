@@ -10,6 +10,7 @@ use App\Models\QcmOption;
 use App\Models\QcmQuestion;
 use App\Models\Resource;
 use App\Services\NotificationService;
+use App\Support\CodeExercisePresets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -345,6 +346,13 @@ class ExerciseController extends Controller
     }
 
     // ── Code Editor ───────────────────────────────────────────────────────────
+
+    public function codeEditorPresets(Request $request)
+    {
+        return response()->json([
+            'presets' => CodeExercisePresets::all(),
+        ]);
+    }
 
     public function getCodeEditor(Request $request, Resource $resource)
     {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Save, ArrowLeft, Upload } from 'lucide-react';
+import { Save, ArrowLeft, Upload, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
@@ -36,6 +36,11 @@ export default function CodeEditorBuilderPage() {
   const { data } = useQuery({
     queryKey: ['teacher-code-editor', resourceId],
     queryFn: () => api.get(`/teacher/resources/${resourceId}/code-editor`).then(r => r.data),
+  });
+
+  const { data: presetsData } = useQuery({
+    queryKey: ['teacher-code-editor-presets'],
+    queryFn: () => api.get('/teacher/code-editor-presets').then(r => r.data),
   });
 
   useEffect(() => {
@@ -88,6 +93,20 @@ export default function CodeEditorBuilderPage() {
   };
 
   const exercise = data?.exercise;
+  const presets = presetsData?.presets || [];
+
+  const applyPreset = (preset) => {
+    setTitle(preset.title || '');
+    setInstructions(preset.instructions || '');
+    setLanguage(preset.language || 'javascript');
+    setStarterCode(preset.starter_code || '');
+    setExpectedOutput(preset.expected_output || '');
+    setTests(preset.tests || []);
+    setAutoCorrect((preset.tests || []).length > 0);
+    setMaxScore((preset.tests || []).reduce((total, test) => total + Number(test.points || 1), 0) || 20);
+    toast.success('Modele applique');
+  };
+
   const addTest = () => setTests(items => [...items, {
     label: '',
     type: 'contains',
@@ -115,6 +134,35 @@ export default function CodeEditorBuilderPage() {
       </div>
 
       <div className="grid gap-4">
+        {presets.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={18} className="text-indigo-500" />
+              <h2 className="font-semibold text-gray-800">Modeles rapides</h2>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {presets.map(preset => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className="text-left rounded-xl border border-gray-200 p-4 hover:border-indigo-300 hover:bg-indigo-50 transition"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-gray-800">{preset.title}</p>
+                      <p className="mt-1 text-sm text-gray-500">{preset.summary}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium uppercase text-gray-600">
+                      {preset.language}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Config */}
         <div className="bg-white rounded-xl shadow-sm p-5 grid gap-4">
           <div className="grid grid-cols-2 gap-4">

@@ -92,6 +92,43 @@ class TeacherExerciseBuilderApiTest extends TestCase
             ->assertJsonCount(3, 'exercise.content.tests');
     }
 
+    public function test_teacher_can_list_code_editor_presets_and_create_exercise_from_one(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'is_visible' => true]);
+
+        $preset = $this->actingAs($teacher, 'sanctum')
+            ->getJson('/api/teacher/code-editor-presets')
+            ->assertOk()
+            ->assertJsonCount(5, 'presets')
+            ->assertJsonPath('presets.0.id', 'html-profile-card')
+            ->json('presets.0');
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/code-editor", [
+                'title' => $preset['title'],
+                'instructions' => $preset['instructions'],
+                'language' => $preset['language'],
+                'starter_code' => $preset['starter_code'],
+                'expected_output' => $preset['expected_output'],
+                'auto_correct' => true,
+                'tests' => $preset['tests'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('exercise.type', 'code_editor')
+            ->assertJsonPath('exercise.auto_correct', true)
+            ->assertJsonPath('exercise.content.language', 'html')
+            ->assertJsonCount(5, 'exercise.content.tests');
+
+        $this->assertDatabaseHas('exercises', [
+            'resource_id' => $resource->id,
+            'title' => 'Carte de profil HTML',
+            'type' => 'code_editor',
+            'max_score' => 7,
+        ]);
+    }
+
     public function test_teacher_can_enable_file_submission_and_correct_submission_with_notification(): void
     {
         $teacher = $this->user('teacher');

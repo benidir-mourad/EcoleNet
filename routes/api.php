@@ -86,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('resources/{resource}/ordering', [ExerciseController::class, 'saveOrdering']);
 
         // Code Editor builder
+        Route::get('code-editor-presets', [ExerciseController::class, 'codeEditorPresets']);
         Route::get('resources/{resource}/code-editor',  [ExerciseController::class, 'getCodeEditor']);
         Route::post('resources/{resource}/code-editor', [ExerciseController::class, 'saveCodeEditor']);
 

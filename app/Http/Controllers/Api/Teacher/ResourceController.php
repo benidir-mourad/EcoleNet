@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Chapter;
 use App\Models\Course;
 use App\Models\Resource;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -101,8 +102,15 @@ class ResourceController extends Controller
     {
         $this->ensureTeacherOwnsResource($request, $resource);
 
+        $wasVisible = $resource->is_visible;
         $resource->update(['is_visible' => !$resource->is_visible]);
-        return response()->json(['resource' => $resource->fresh()]);
+        $resource = $resource->fresh('exercise');
+
+        if (!$wasVisible && $resource->is_visible && $resource->exercise) {
+            app(NotificationService::class)->notifyNewExercise($resource, $resource->exercise);
+        }
+
+        return response()->json(['resource' => $resource]);
     }
 
     public function uploadFile(Request $request, Resource $resource)

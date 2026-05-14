@@ -62,7 +62,7 @@ class TeacherExerciseBuilderApiTest extends TestCase
 
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $student->id,
-            'type' => 'new_assignment',
+            'type' => 'new_exercise',
         ]);
     }
 
@@ -263,8 +263,55 @@ class TeacherExerciseBuilderApiTest extends TestCase
 
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $student->id,
-            'type' => 'correction_published',
+            'type' => 'submission_corrected',
         ]);
+    }
+
+    public function test_publishing_hidden_exercise_notifies_students_once(): void
+    {
+        $teacher = $this->user('teacher');
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, ['type' => 'exercise', 'is_visible' => false]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/code-editor", [
+                'title' => 'Variables JS',
+                'instructions' => 'Declarer une variable.',
+                'language' => 'javascript',
+                'starter_code' => 'let total;',
+                'max_score' => 10,
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseMissing('internal_notifications', [
+            'user_id' => $student->id,
+            'type' => 'new_exercise',
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->patchJson("/api/teacher/resources/{$resource->id}/visibility")
+            ->assertOk()
+            ->assertJsonPath('resource.is_visible', true);
+
+        $this->assertDatabaseCount('internal_notifications', 1);
+        $this->assertDatabaseHas('internal_notifications', [
+            'user_id' => $student->id,
+            'type' => 'new_exercise',
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->patchJson("/api/teacher/resources/{$resource->id}/visibility")
+            ->assertOk()
+            ->assertJsonPath('resource.is_visible', false);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->patchJson("/api/teacher/resources/{$resource->id}/visibility")
+            ->assertOk()
+            ->assertJsonPath('resource.is_visible', true);
+
+        $this->assertDatabaseCount('internal_notifications', 1);
     }
 
     public function test_teacher_can_save_truth_table_builder(): void

@@ -733,7 +733,7 @@ class ExerciseController extends Controller
 
         app(NotificationService::class)->create(
             $submission->student,
-            'correction_published',
+            'submission_corrected',
             'Correction publiée',
             "La correction de {$submission->exercise->title} est disponible.",
             [
@@ -749,23 +749,11 @@ class ExerciseController extends Controller
 
     private function notifyNewExercise(Resource $resource, Exercise $exercise): void
     {
-        if (!$exercise->wasRecentlyCreated || !$resource->is_visible) {
+        if (!$exercise->wasRecentlyCreated) {
             return;
         }
 
-        app(NotificationService::class)->notifyCourseStudents(
-            $resource,
-            'new_assignment',
-            'Nouveau devoir',
-            "Un nouveau devoir est disponible : {$exercise->title}.",
-            [
-                'exercise_id' => $exercise->id,
-                'resource_id' => $resource->id,
-                'course_id'   => $resource->course_id,
-                'deadline'    => $exercise->deadline,
-                'url'         => "/student/courses/{$resource->course_id}",
-            ]
-        );
+        app(NotificationService::class)->notifyNewExercise($resource, $exercise);
     }
 
     private function markExerciseCompleted(Request $request, Resource $resource): void

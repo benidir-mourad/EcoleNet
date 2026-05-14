@@ -42,13 +42,13 @@ class NotificationServiceTest extends TestCase
 
         app(NotificationService::class)->notifyCourseStudents(
             $resource,
-            'new_assignment',
+            'new_exercise',
             'Nouveau devoir',
             'À faire'
         );
 
-        $this->assertDatabaseHas('internal_notifications', ['user_id' => $approved->id, 'type' => 'new_assignment']);
-        $this->assertDatabaseMissing('internal_notifications', ['user_id' => $pending->id, 'type' => 'new_assignment']);
-        $this->assertDatabaseMissing('internal_notifications', ['user_id' => $outsider->id, 'type' => 'new_assignment']);
+        $this->assertDatabaseHas('internal_notifications', ['user_id' => $approved->id, 'type' => 'new_exercise']);
+        $this->assertDatabaseMissing('internal_notifications', ['user_id' => $pending->id, 'type' => 'new_exercise']);
+        $this->assertDatabaseMissing('internal_notifications', ['user_id' => $outsider->id, 'type' => 'new_exercise']);
     }
 }

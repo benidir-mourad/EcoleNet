@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\Exercise;
 use App\Models\Notification;
 use App\Models\Resource;
 use App\Models\User;
@@ -53,6 +54,33 @@ class NotificationService
         foreach ($students as $student) {
             $this->create($student, $type, $title, $body, $data);
         }
+    }
+
+    public function notifyNewExercise(Resource $resource, Exercise $exercise): void
+    {
+        if (!$resource->is_visible) {
+            return;
+        }
+
+        if (Notification::where('type', 'new_exercise')
+            ->where('data->exercise_id', $exercise->id)
+            ->exists()) {
+            return;
+        }
+
+        $this->notifyCourseStudents(
+            $resource,
+            'new_exercise',
+            'Nouveau devoir',
+            "Un nouveau devoir est disponible : {$exercise->title}.",
+            [
+                'exercise_id' => $exercise->id,
+                'resource_id' => $resource->id,
+                'course_id'   => $resource->course_id,
+                'deadline'    => $exercise->deadline,
+                'url'         => "/student/courses/{$resource->course_id}",
+            ]
+        );
     }
 
     private function isDisabledForUser(User $user, string $type): bool

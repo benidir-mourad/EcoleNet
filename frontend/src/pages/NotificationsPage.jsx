@@ -15,7 +15,9 @@ const typeLabels = {
   forum_post: 'Forum',
   enrollment_approved: 'Inscriptions',
   new_exercise: 'Exercices',
+  new_assignment: 'Exercices',
   submission_corrected: 'Corrections',
+  correction_published: 'Corrections',
 };
 
 function formatDate(value) {

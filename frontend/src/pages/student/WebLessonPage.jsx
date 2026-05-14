@@ -35,6 +35,8 @@ const splitFillBlankText = (text = '') => {
 function LessonBlock({ block }) {
   const [fillAnswers, setFillAnswers] = useState({});
   const [fillChecked, setFillChecked] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizChecked, setQuizChecked] = useState(false);
 
   if (block.type === 'heading') {
     return <h2 className="text-xl font-bold text-gray-900">{block.text}</h2>;
@@ -107,6 +109,66 @@ function LessonBlock({ block }) {
             </span>
           )}
         </div>
+      </div>
+    );
+  }
+
+  if (block.type === 'quiz') {
+    const options = block.options || [];
+    const correctIndexes = options
+      .map((option, index) => option.is_correct ? index : null)
+      .filter(index => index !== null);
+    const selectedIndexes = Object.entries(quizAnswers)
+      .filter(([, selected]) => selected)
+      .map(([index]) => Number(index));
+    const isCorrect = correctIndexes.length === selectedIndexes.length
+      && correctIndexes.every(index => selectedIndexes.includes(index));
+
+    return (
+      <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+        <p className="mb-4 text-base font-semibold text-amber-950">{block.question || 'Question'}</p>
+        <div className="space-y-2">
+          {options.map((option, index) => {
+            const selected = Boolean(quizAnswers[index]);
+            const showCorrect = quizChecked && option.is_correct;
+            const showWrong = quizChecked && selected && !option.is_correct;
+
+            return (
+              <label
+                key={index}
+                className={`flex items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm ${showCorrect ? 'border-emerald-300 text-emerald-800' : showWrong ? 'border-red-300 text-red-800' : 'border-amber-100 text-gray-800'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={e => {
+                    setQuizAnswers(values => ({ ...values, [index]: e.target.checked }));
+                    setQuizChecked(false);
+                  }}
+                  className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setQuizChecked(true)}
+            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+          >
+            Corriger
+          </button>
+          {quizChecked && (
+            <span className={`text-sm font-semibold ${isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
+              {isCorrect ? 'Bonne reponse' : 'A corriger'}
+            </span>
+          )}
+        </div>
+        {quizChecked && block.explanation && (
+          <p className="mt-3 rounded-xl bg-white/70 px-4 py-3 text-sm text-gray-700">{block.explanation}</p>
+        )}
       </div>
     );
   }

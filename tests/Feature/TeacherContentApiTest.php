@@ -222,4 +222,39 @@ class TeacherContentApiTest extends TestCase
             ->assertJsonPath('lesson.content.pages.0.blocks.0.prompt', 'Completer la phrase.')
             ->assertJsonPath('lesson.content.pages.0.blocks.0.case_sensitive', false);
     }
+
+    public function test_teacher_can_save_web_lesson_quiz_block(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, [
+            'type' => 'presentation',
+            'title' => 'QCM JavaScript',
+            'is_visible' => false,
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/web-lesson", [
+                'content' => [
+                    'pages' => [[
+                        'title' => 'Controle rapide',
+                        'blocks' => [[
+                            'type' => 'quiz',
+                            'question' => 'Quel mot cle declare une constante ?',
+                            'options' => [
+                                ['label' => 'let', 'is_correct' => false],
+                                ['label' => 'const', 'is_correct' => true],
+                                ['label' => 'echo', 'is_correct' => false],
+                            ],
+                            'explanation' => 'const declare une constante en JavaScript.',
+                        ]],
+                    ]],
+                ],
+                'is_visible' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.type', 'quiz')
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.options.1.label', 'const')
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.options.1.is_correct', true);
+    }
 }

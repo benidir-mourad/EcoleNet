@@ -157,6 +157,76 @@ class TeacherExerciseBuilderApiTest extends TestCase
             ->assertJsonPath('exercise.content.tests.2.type', 'sql_join');
     }
 
+    public function test_teacher_can_manage_reusable_code_editor_templates(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $sourceResource = $this->resourceForCourse($course, ['type' => 'exercise', 'is_visible' => true]);
+        $targetResource = $this->resourceForCourse($course, ['type' => 'exercise', 'is_visible' => true]);
+
+        Exercise::create([
+            'resource_id' => $sourceResource->id,
+            'title' => 'Fonctions JS',
+            'instructions' => 'Créer deux fonctions.',
+            'type' => 'code_editor',
+            'content' => [
+                'language' => 'javascript',
+                'starter_code' => 'function total() {}',
+                'expected_output' => '15',
+                'tests' => [
+                    ['label' => 'Fonction total', 'type' => 'js_function', 'value' => 'total', 'points' => 2],
+                ],
+            ],
+            'max_score' => 2,
+            'auto_correct' => true,
+        ]);
+
+        $templateId = $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$sourceResource->id}/code-editor/templates", [
+                'title' => 'Modèle fonctions JS',
+                'summary' => 'Base réutilisable pour les fonctions.',
+                'level' => 'intermediate',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('template.title', 'Modèle fonctions JS')
+            ->assertJsonPath('template.language', 'javascript')
+            ->assertJsonPath('template.level', 'intermediate')
+            ->json('template.id');
+
+        $this->actingAs($teacher, 'sanctum')
+            ->getJson('/api/teacher/code-editor-templates?language=javascript&level=intermediate')
+            ->assertOk()
+            ->assertJsonCount(1, 'templates')
+            ->assertJsonPath('templates.0.id', $templateId);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$targetResource->id}/code-editor/templates/{$templateId}")
+            ->assertOk()
+            ->assertJsonPath('exercise.title', 'Modèle fonctions JS')
+            ->assertJsonPath('exercise.type', 'code_editor')
+            ->assertJsonPath('exercise.content.language', 'javascript')
+            ->assertJsonPath('exercise.auto_correct', true);
+
+        $this->assertDatabaseHas('resources', [
+            'id' => $targetResource->id,
+            'file_type' => 'code_editor',
+        ]);
+
+        $otherTeacher = $this->user('teacher');
+        $otherCourse = $this->courseForTeacher($otherTeacher);
+        $otherResource = $this->resourceForCourse($otherCourse, ['type' => 'exercise']);
+
+        $this->actingAs($otherTeacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$otherResource->id}/code-editor/templates/{$templateId}")
+            ->assertForbidden();
+
+        $this->actingAs($teacher, 'sanctum')
+            ->deleteJson("/api/teacher/code-editor-templates/{$templateId}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('exercise_templates', ['id' => $templateId]);
+    }
+
     public function test_teacher_can_enable_file_submission_and_correct_submission_with_notification(): void
     {
         $teacher = $this->user('teacher');

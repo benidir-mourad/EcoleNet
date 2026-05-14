@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Save, ArrowLeft, Upload, Sparkles } from 'lucide-react';
+import { Save, ArrowLeft, Upload, Sparkles, BookmarkPlus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
@@ -14,6 +14,12 @@ const LANGUAGES = [
   { value: 'sql',        label: 'SQL' },
   { value: 'python',     label: 'Python' },
   { value: 'text',       label: 'Texte libre' },
+];
+
+const LEVELS = [
+  { value: 'beginner', label: 'Débutant' },
+  { value: 'intermediate', label: 'Intermédiaire' },
+  { value: 'advanced', label: 'Avancé' },
 ];
 
 const TEST_FIELD_CONFIG = {
@@ -107,6 +113,10 @@ export default function CodeEditorBuilderPage() {
   const [deadline, setDeadline]       = useState('');
   const [initialized, setInitialized] = useState(false);
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
+  const [templateLanguageFilter, setTemplateLanguageFilter] = useState('');
+  const [templateLevelFilter, setTemplateLevelFilter] = useState('');
+  const [templateLevel, setTemplateLevel] = useState('beginner');
+  const [templateSummary, setTemplateSummary] = useState('');
 
   const { data } = useQuery({
     queryKey: ['teacher-code-editor', resourceId],
@@ -116,6 +126,18 @@ export default function CodeEditorBuilderPage() {
   const { data: presetsData } = useQuery({
     queryKey: ['teacher-code-editor-presets'],
     queryFn: () => api.get('/teacher/code-editor-presets').then(r => r.data),
+  });
+
+  const { data: templatesData } = useQuery({
+    queryKey: ['teacher-code-editor-templates', templateLanguageFilter, templateLevelFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (templateLanguageFilter) params.set('language', templateLanguageFilter);
+      if (templateLevelFilter) params.set('level', templateLevelFilter);
+
+      const query = params.toString();
+      return api.get(`/teacher/code-editor-templates${query ? `?${query}` : ''}`).then(r => r.data);
+    },
   });
 
   useEffect(() => {
@@ -147,6 +169,49 @@ export default function CodeEditorBuilderPage() {
     onError: () => toast.error('Erreur lors de la sauvegarde'),
   });
 
+  const saveTemplate = useMutation({
+    mutationFn: () => api.post(`/teacher/resources/${resourceId}/code-editor/templates`, {
+      title: title || undefined,
+      summary: templateSummary || null,
+      level: templateLevel,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries(['teacher-code-editor-templates']);
+      setTemplateSummary('');
+      toast.success('Modèle enregistré');
+    },
+    onError: () => toast.error("Sauvegardez d'abord l'exercice, puis créez le modèle"),
+  });
+
+  const applyTemplate = useMutation({
+    mutationFn: (templateId) => api.post(`/teacher/resources/${resourceId}/code-editor/templates/${templateId}`),
+    onSuccess: (response) => {
+      const ex = response.data.exercise;
+      setTitle(ex.title || '');
+      setInstructions(ex.instructions || '');
+      setLanguage(ex.content?.language || 'javascript');
+      setStarterCode(ex.content?.starter_code || '');
+      setExpectedOutput(ex.content?.expected_output || '');
+      setAutoCorrect(Boolean(ex.auto_correct));
+      setTests(ex.content?.tests || []);
+      setMaxScore(ex.max_score || 20);
+      setDeadline('');
+      setInitialized(true);
+      qc.invalidateQueries(['teacher-code-editor', resourceId]);
+      toast.success('Modèle appliqué');
+    },
+    onError: () => toast.error("Erreur lors de l'application du modèle"),
+  });
+
+  const deleteTemplate = useMutation({
+    mutationFn: (templateId) => api.delete(`/teacher/code-editor-templates/${templateId}`),
+    onSuccess: () => {
+      qc.invalidateQueries(['teacher-code-editor-templates']);
+      toast.success('Modèle supprimé');
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
   const handleTemplateUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -169,6 +234,7 @@ export default function CodeEditorBuilderPage() {
 
   const exercise = data?.exercise;
   const presets = presetsData?.presets || [];
+  const templates = templatesData?.templates || [];
 
   const applyPreset = (preset) => {
     setTitle(preset.title || '');
@@ -237,6 +303,107 @@ export default function CodeEditorBuilderPage() {
             </div>
           </div>
         )}
+
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <BookmarkPlus size={18} className="text-indigo-500" />
+                <h2 className="font-semibold text-gray-800">Mes modèles d'exercices</h2>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Réutilisez vos exercices auto-corrigés par langage et par niveau.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[150px_150px]">
+              <select
+                value={templateLanguageFilter}
+                onChange={e => setTemplateLanguageFilter(e.target.value)}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Tous langages</option>
+                {LANGUAGES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+              <select
+                value={templateLevelFilter}
+                onChange={e => setTemplateLevelFilter(e.target.value)}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Tous niveaux</option>
+                {LEVELS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {templates.map(template => (
+              <div key={template.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-800">{template.title}</p>
+                    {template.summary && <p className="mt-1 text-sm text-gray-500">{template.summary}</p>}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium uppercase text-gray-600">
+                    {template.language || 'code'}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500">
+                  <span>{LEVELS.find(item => item.value === template.level)?.label || template.level}</span>
+                  <span>{template.max_score} pts</span>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate.mutate(template.id)}
+                    disabled={applyTemplate.isPending}
+                    className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+                  >
+                    Appliquer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteTemplate.mutate(template.id)}
+                    disabled={deleteTemplate.isPending}
+                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-60"
+                    title="Supprimer le modèle"
+                    aria-label="Supprimer le modèle"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {templates.length === 0 && (
+              <div className="rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-500 md:col-span-2 xl:col-span-3">
+                Aucun modèle ne correspond aux filtres.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 grid gap-3 border-t border-gray-100 pt-4 lg:grid-cols-[180px_1fr_auto]">
+            <select
+              value={templateLevel}
+              onChange={e => setTemplateLevel(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {LEVELS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <input
+              value={templateSummary}
+              onChange={e => setTemplateSummary(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Résumé court du modèle"
+            />
+            <button
+              type="button"
+              onClick={() => saveTemplate.mutate()}
+              disabled={!exercise || saveTemplate.isPending}
+              className="rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
+            >
+              Enregistrer comme modèle
+            </button>
+          </div>
+        </div>
 
         {/* Config */}
         <div className="bg-white rounded-xl shadow-sm p-5 grid gap-4">

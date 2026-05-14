@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Exercise;
 use App\Models\ExerciseSubmission;
+use App\Models\ExerciseTemplate;
 use App\Models\QcmOption;
 use App\Models\QcmQuestion;
 use App\Models\Resource;
@@ -354,11 +355,90 @@ class ExerciseController extends Controller
         ]);
     }
 
+    public function codeEditorTemplates(Request $request)
+    {
+        $data = $request->validate([
+            'language' => 'nullable|string|in:javascript,html,css,php,sql,python,text',
+            'level' => 'nullable|string|in:beginner,intermediate,advanced',
+        ]);
+
+        $templates = ExerciseTemplate::query()
+            ->where('teacher_id', $request->user()->id)
+            ->where('type', 'code_editor')
+            ->when($data['language'] ?? null, fn ($query, $language) => $query->where('language', $language))
+            ->when($data['level'] ?? null, fn ($query, $level) => $query->where('level', $level))
+            ->latest()
+            ->get();
+
+        return response()->json(['templates' => $templates]);
+    }
+
     public function getCodeEditor(Request $request, Resource $resource)
     {
         $this->ensureCurrentUserCanAccessResource($request, $resource);
 
         return response()->json(['exercise' => $resource->exercise]);
+    }
+
+    public function storeCodeEditorTemplate(Request $request, Resource $resource)
+    {
+        $this->ensureTeacherOwnsResource($request, $resource);
+
+        $exercise = $resource->exercise;
+        abort_if(!$exercise || $exercise->type !== 'code_editor', 404, 'Exercise not found.');
+
+        $data = $request->validate([
+            'title' => 'nullable|string|max:200',
+            'summary' => 'nullable|string|max:500',
+            'level' => 'nullable|string|in:beginner,intermediate,advanced',
+        ]);
+
+        $template = ExerciseTemplate::create([
+            'teacher_id' => $request->user()->id,
+            'title' => $data['title'] ?? $exercise->title,
+            'type' => 'code_editor',
+            'language' => $exercise->content['language'] ?? null,
+            'level' => $data['level'] ?? 'beginner',
+            'summary' => $data['summary'] ?? null,
+            'instructions' => $exercise->instructions,
+            'content' => $exercise->content,
+            'max_score' => $exercise->max_score,
+            'auto_correct' => $exercise->auto_correct,
+        ]);
+
+        return response()->json(['template' => $template], 201);
+    }
+
+    public function applyCodeEditorTemplate(Request $request, Resource $resource, ExerciseTemplate $template)
+    {
+        $this->ensureTeacherOwnsResource($request, $resource);
+        abort_if($template->teacher_id !== $request->user()->id || $template->type !== 'code_editor', 403, 'Forbidden.');
+
+        $exercise = Exercise::updateOrCreate(
+            ['resource_id' => $resource->id],
+            [
+                'title' => $template->title,
+                'instructions' => $template->instructions,
+                'type' => 'code_editor',
+                'content' => $template->content,
+                'max_score' => $template->max_score,
+                'auto_correct' => $template->auto_correct,
+            ]
+        );
+
+        $resource->update(['file_type' => 'code_editor']);
+        $this->notifyNewExercise($resource, $exercise);
+
+        return response()->json(['exercise' => $exercise]);
+    }
+
+    public function destroyCodeEditorTemplate(Request $request, ExerciseTemplate $template)
+    {
+        abort_if($template->teacher_id !== $request->user()->id || $template->type !== 'code_editor', 403, 'Forbidden.');
+
+        $template->delete();
+
+        return response()->noContent();
     }
 
     public function saveCodeEditor(Request $request, Resource $resource)

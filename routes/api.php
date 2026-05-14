@@ -87,8 +87,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Code Editor builder
         Route::get('code-editor-presets', [ExerciseController::class, 'codeEditorPresets']);
+        Route::get('code-editor-templates', [ExerciseController::class, 'codeEditorTemplates']);
         Route::get('resources/{resource}/code-editor',  [ExerciseController::class, 'getCodeEditor']);
         Route::post('resources/{resource}/code-editor', [ExerciseController::class, 'saveCodeEditor']);
+        Route::post('resources/{resource}/code-editor/templates', [ExerciseController::class, 'storeCodeEditorTemplate']);
+        Route::post('resources/{resource}/code-editor/templates/{template}', [ExerciseController::class, 'applyCodeEditorTemplate']);
+        Route::delete('code-editor-templates/{template}', [ExerciseController::class, 'destroyCodeEditorTemplate']);
 
         // Truth Table builder
         Route::get('resources/{resource}/truth-table',  [ExerciseController::class, 'getTruthTable']);

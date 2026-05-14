@@ -129,4 +129,97 @@ class TeacherContentApiTest extends TestCase
 
         $this->assertDatabaseMissing('chapters', ['id' => $chapter->id]);
     }
+
+    public function test_teacher_can_save_web_lesson_and_student_reads_published_lesson(): void
+    {
+        $teacher = $this->user('teacher');
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, [
+            'type' => 'presentation',
+            'title' => 'Variables en JavaScript',
+            'is_visible' => false,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $payload = [
+            'content' => [
+                'pages' => [
+                    [
+                        'title' => 'Introduction',
+                        'blocks' => [
+                            ['type' => 'heading', 'text' => 'Les variables'],
+                            ['type' => 'paragraph', 'text' => 'Une variable stocke une valeur.'],
+                            ['type' => 'code', 'language' => 'javascript', 'code' => 'let age = 18;'],
+                            ['type' => 'callout', 'tone' => 'success', 'text' => 'let est le mot-clé recommandé.'],
+                        ],
+                    ],
+                    [
+                        'title' => 'Synthèse',
+                        'blocks' => [
+                            ['type' => 'paragraph', 'text' => 'On utilise const quand la valeur ne change pas.'],
+                        ],
+                    ],
+                ],
+            ],
+            'is_visible' => false,
+        ];
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/web-lesson", $payload)
+            ->assertOk()
+            ->assertJsonPath('resource.file_type', 'web_lesson')
+            ->assertJsonPath('resource.is_visible', false)
+            ->assertJsonPath('lesson.content.pages.0.blocks.2.language', 'javascript');
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson("/api/student/resources/{$resource->id}/web-lesson")
+            ->assertForbidden();
+
+        $payload['is_visible'] = true;
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/web-lesson", $payload)
+            ->assertOk()
+            ->assertJsonPath('resource.is_visible', true);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson("/api/student/resources/{$resource->id}/web-lesson")
+            ->assertOk()
+            ->assertJsonPath('resource.id', $resource->id)
+            ->assertJsonPath('lesson.content.pages.1.title', 'Synthèse');
+
+        $this->assertDatabaseHas('web_lessons', ['resource_id' => $resource->id]);
+    }
+
+    public function test_teacher_can_save_web_lesson_fill_blank_block(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $resource = $this->resourceForCourse($course, [
+            'type' => 'presentation',
+            'title' => 'Mots cles JavaScript',
+            'is_visible' => false,
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$resource->id}/web-lesson", [
+                'content' => [
+                    'pages' => [[
+                        'title' => 'Variables',
+                        'blocks' => [[
+                            'type' => 'fill_blank',
+                            'prompt' => 'Completer la phrase.',
+                            'text' => 'Une constante se declare avec [[const]].',
+                            'case_sensitive' => false,
+                        ]],
+                    ]],
+                ],
+                'is_visible' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.type', 'fill_blank')
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.prompt', 'Completer la phrase.')
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.case_sensitive', false);
+    }
 }

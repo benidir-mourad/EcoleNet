@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Teacher\SectionController;
 use App\Http\Controllers\Api\Teacher\CourseController;
 use App\Http\Controllers\Api\Teacher\ChapterController;
 use App\Http\Controllers\Api\Teacher\ResourceController;
+use App\Http\Controllers\Api\Teacher\WebLessonController as TeacherWebLessonController;
 use App\Http\Controllers\Api\Teacher\EnrollmentController;
 use App\Http\Controllers\Api\Teacher\ExerciseController;
 use App\Http\Controllers\Api\Teacher\MessageController as TeacherMessageController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\Student\SubmissionController;
 use App\Http\Controllers\Api\Student\MessageController as StudentMessageController;
 use App\Http\Controllers\Api\Student\ForumController as StudentForumController;
 use App\Http\Controllers\Api\Student\ProgressController;
+use App\Http\Controllers\Api\Student\WebLessonController as StudentWebLessonController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 
 // Public routes
@@ -68,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('chapters/{chapter}/resources', [ResourceController::class, 'storeForChapter']);
         Route::patch('resources/{resource}/visibility', [ResourceController::class, 'toggleVisibility']);
         Route::post('resources/{resource}/file',        [ResourceController::class, 'uploadFile']);
+        Route::get('resources/{resource}/web-lesson',   [TeacherWebLessonController::class, 'show']);
+        Route::post('resources/{resource}/web-lesson',  [TeacherWebLessonController::class, 'save']);
 
         // QCM builder
         Route::get('resources/{resource}/qcm',  [ExerciseController::class, 'getQcm']);
@@ -146,6 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('courses/{course}',    [StudentCourseController::class, 'show']);
         Route::get('resources/{resource}',[StudentCourseController::class, 'resource']);
         Route::post('resources/{resource}/view', [ProgressController::class, 'markViewed']);
+        Route::get('resources/{resource}/web-lesson', [StudentWebLessonController::class, 'show']);
 
         // QCM
         Route::post('resources/{resource}/qcm/attempt', [QcmController::class, 'attempt']);

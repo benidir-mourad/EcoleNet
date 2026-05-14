@@ -25,6 +25,7 @@ const FillBlanksBuilderPage = lazy(() => import('./pages/teacher/FillBlanksBuild
 const OrderingBuilderPage = lazy(() => import('./pages/teacher/OrderingBuilderPage'));
 const CodeEditorBuilderPage = lazy(() => import('./pages/teacher/CodeEditorBuilderPage'));
 const TruthTableBuilderPage = lazy(() => import('./pages/teacher/TruthTableBuilderPage'));
+const WebLessonBuilderPage = lazy(() => import('./pages/teacher/WebLessonBuilderPage'));
 
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
 const CoursePage = lazy(() => import('./pages/student/CoursePage'));
@@ -38,6 +39,7 @@ const FillBlanksPage = lazy(() => import('./pages/student/FillBlanksPage'));
 const OrderingPage = lazy(() => import('./pages/student/OrderingPage'));
 const CodeEditorPage = lazy(() => import('./pages/student/CodeEditorPage'));
 const TruthTablePage = lazy(() => import('./pages/student/TruthTablePage'));
+const WebLessonPage = lazy(() => import('./pages/student/WebLessonPage'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
@@ -92,6 +94,7 @@ export default function App() {
           <Route path="/teacher/resources/:resourceId/ordering"       element={T(<OrderingBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/code-editor"    element={T(<CodeEditorBuilderPage />)} />
           <Route path="/teacher/resources/:resourceId/truth-table"    element={T(<TruthTableBuilderPage />)} />
+          <Route path="/teacher/resources/:resourceId/web-lesson"     element={T(<WebLessonBuilderPage />)} />
           <Route path="/teacher/library"                              element={T(<LibraryPage />)} />
           <Route path="/teacher/notifications"                         element={T(<NotificationsPage color="indigo" />)} />
 
@@ -106,6 +109,7 @@ export default function App() {
           <Route path="/student/resources/:resourceId/ordering"     element={S(<OrderingPage />)} />
           <Route path="/student/resources/:resourceId/code-editor"  element={S(<CodeEditorPage />)} />
           <Route path="/student/resources/:resourceId/truth-table"  element={S(<TruthTablePage />)} />
+          <Route path="/student/resources/:resourceId/web-lesson"   element={S(<WebLessonPage />)} />
           <Route path="/student/progress"                         element={S(<ProgressPage />)} />
           <Route path="/student/messages"                         element={S(<StudentMessagesPage />)} />
           <Route path="/student/notifications"                    element={S(<NotificationsPage color="emerald" />)} />

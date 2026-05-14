@@ -54,6 +54,11 @@ class Resource extends Model
         return $this->hasOne(Exercise::class);
     }
 
+    public function webLesson()
+    {
+        return $this->hasOne(WebLesson::class);
+    }
+
     public function qcmQuestions()
     {
         return $this->hasMany(QcmQuestion::class)->orderBy('order');

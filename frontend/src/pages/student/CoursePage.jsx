@@ -49,10 +49,11 @@ const FILE_ICONS = {
   video_upload: Video, video_youtube: Video, link: LinkIcon,
   qcm: CheckSquare, drag_drop: GripVertical, excel_interactive: CheckSquare, file_upload: Upload,
   fill_blanks: FileText, ordering: CheckSquare, code_editor: Monitor, truth_table: CheckCircle,
+  web_lesson: BookOpen,
 };
 
 const VIEWABLE    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
-const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload', 'fill_blanks', 'ordering', 'code_editor', 'truth_table'];
+const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload', 'fill_blanks', 'ordering', 'code_editor', 'truth_table', 'web_lesson'];
 
 /* ─── ResourceRow ────────────────────────────────────────────────────────── */
 
@@ -121,6 +122,12 @@ function ResourceRow({ resource, onView, onMark }) {
           <Link to={`/student/resources/${resource.id}/truth-table`} onClick={() => onMark(resource.id)}
             className="flex items-center gap-1.5 bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-teal-700">
             <CheckCircle size={13} /> Table
+          </Link>
+        )}
+        {resource.file_type === 'web_lesson' && (
+          <Link to={`/student/resources/${resource.id}/web-lesson`} onClick={() => onMark(resource.id)}
+            className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-emerald-700">
+            <BookOpen size={13} /> Lire
           </Link>
         )}
         {isEmpty && <span className="text-xs text-gray-300 italic">Non disponible</span>}

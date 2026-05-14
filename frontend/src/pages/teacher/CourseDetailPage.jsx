@@ -158,6 +158,10 @@ function ResourceCard({ resource, courseId, onPreview }) {
               <PlayCircle size={16} />
             </button>
           )}
+          <Link title="Créer ou modifier une leçon web" to={`/teacher/resources/${resource.id}/web-lesson`}
+            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition">
+            <BookOpen size={16} />
+          </Link>
           {!isEmpty && (
             <button onClick={() => toggleVisibility.mutate()}
               title={resource.is_visible ? 'Masquer' : 'Rendre visible'}

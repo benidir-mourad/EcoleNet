@@ -10,6 +10,7 @@ use App\Models\ExerciseTemplate;
 use App\Models\QcmOption;
 use App\Models\QcmQuestion;
 use App\Models\Resource;
+use App\Models\StudentProgress;
 use App\Services\NotificationService;
 use App\Support\CodeExercisePresets;
 use Illuminate\Http\Request;
@@ -152,6 +153,8 @@ class ExerciseController extends Controller
             'corrected_at' => now(),
         ]);
 
+        $this->markExerciseCompleted($request, $resource);
+
         return response()->json([
             'score'     => $score,
             'max_score' => $pairs->count(),
@@ -252,6 +255,8 @@ class ExerciseController extends Controller
             'corrected_at' => now(),
         ]);
 
+        $this->markExerciseCompleted($request, $resource);
+
         return response()->json([
             'score'     => $score,
             'max_score' => count($correctAnswers),
@@ -338,6 +343,8 @@ class ExerciseController extends Controller
             'submitted_at' => now(),
             'corrected_at' => now(),
         ]);
+
+        $this->markExerciseCompleted($request, $resource);
 
         return response()->json([
             'score'     => $score,
@@ -591,6 +598,8 @@ class ExerciseController extends Controller
             'corrected_at' => now(),
         ]);
 
+        $this->markExerciseCompleted($request, $resource);
+
         return response()->json([
             'score'     => $score,
             'max_score' => $total,
@@ -755,6 +764,20 @@ class ExerciseController extends Controller
                 'course_id'   => $resource->course_id,
                 'deadline'    => $exercise->deadline,
                 'url'         => "/student/courses/{$resource->course_id}",
+            ]
+        );
+    }
+
+    private function markExerciseCompleted(Request $request, Resource $resource): void
+    {
+        StudentProgress::updateOrCreate(
+            ['student_id' => $request->user()->id, 'resource_id' => $resource->id],
+            [
+                'course_id' => $resource->course_id,
+                'is_viewed' => true,
+                'is_completed' => true,
+                'viewed_at' => now(),
+                'completed_at' => now(),
             ]
         );
     }

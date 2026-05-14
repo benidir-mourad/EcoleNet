@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Exercise;
+use App\Models\Chapter;
 use App\Models\QcmOption;
 use App\Models\QcmQuestion;
+use App\Models\StudentProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesTestData;
 use Tests\TestCase;
@@ -48,6 +50,67 @@ class StudentLearningApiTest extends TestCase
             ->assertJsonPath('summary.0.viewed', 1)
             ->assertJsonPath('summary.0.total', 2)
             ->assertJsonPath('summary.0.percent', 50);
+    }
+
+    public function test_student_course_includes_guided_chapter_progress(): void
+    {
+        $teacher = $this->user('teacher');
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($teacher);
+        $chapter = Chapter::create(['course_id' => $course->id, 'title' => 'HTML bases', 'order' => 1]);
+        $lesson = $this->resourceForCourse($course, [
+            'chapter_id' => $chapter->id,
+            'title' => 'Lire le cours',
+            'file_type' => 'web_lesson',
+            'is_visible' => true,
+        ]);
+        $exercise = $this->resourceForCourse($course, [
+            'chapter_id' => $chapter->id,
+            'title' => 'Coder une page',
+            'type' => 'exercise',
+            'file_type' => 'code_editor',
+            'is_visible' => true,
+            'order' => 2,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        StudentProgress::create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'resource_id' => $lesson->id,
+            'is_viewed' => true,
+            'is_completed' => true,
+            'viewed_at' => now(),
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson("/api/student/courses/{$course->id}")
+            ->assertOk()
+            ->assertJsonPath('course.chapters.0.learning_summary.total', 2)
+            ->assertJsonPath('course.chapters.0.learning_summary.completed', 1)
+            ->assertJsonPath('course.chapters.0.learning_summary.percent', 50)
+            ->assertJsonPath('course.chapters.0.resources.0.learning_status.state', 'completed')
+            ->assertJsonPath('course.chapters.0.resources.1.learning_status.state', 'todo');
+    }
+
+    public function test_student_can_mark_lesson_resource_as_completed(): void
+    {
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($this->user('teacher'));
+        $resource = $this->resourceForCourse($course, ['file_type' => 'web_lesson']);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $this->actingAs($student, 'sanctum')
+            ->postJson("/api/student/resources/{$resource->id}/view", ['is_completed' => true])
+            ->assertOk();
+
+        $this->assertDatabaseHas('student_progress', [
+            'student_id' => $student->id,
+            'resource_id' => $resource->id,
+            'is_viewed' => true,
+            'is_completed' => true,
+        ]);
     }
 
     public function test_student_can_submit_qcm_and_attempt_is_scored(): void

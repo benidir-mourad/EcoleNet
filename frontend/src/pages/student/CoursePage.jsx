@@ -55,6 +55,18 @@ const FILE_ICONS = {
 const VIEWABLE    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
 const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload', 'fill_blanks', 'ordering', 'code_editor', 'truth_table', 'web_lesson'];
 
+const STATUS_LABELS = {
+  completed: 'Termine',
+  in_progress: 'En cours',
+  todo: 'A faire',
+};
+
+const STATUS_STYLES = {
+  completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  in_progress: 'bg-amber-50 text-amber-700 border-amber-200',
+  todo: 'bg-gray-50 text-gray-500 border-gray-200',
+};
+
 /* ─── ResourceRow ────────────────────────────────────────────────────────── */
 
 function ResourceRow({ resource, onView, onMark }) {
@@ -63,6 +75,8 @@ function ResourceRow({ resource, onView, onMark }) {
   const FileIcon = FILE_ICONS[resource.file_type] || FileText;
   const isEmpty  = !resource.file_path && !resource.external_url && !INTERACTIVE.includes(resource.file_type);
   const canView  = !isEmpty && VIEWABLE.includes(resource.file_type);
+  const status = resource.learning_status?.state || 'todo';
+  const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.todo;
 
   return (
     <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
@@ -71,7 +85,17 @@ function ResourceRow({ resource, onView, onMark }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-800 truncate text-sm">{resource.title}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium text-gray-800 truncate text-sm">{resource.title}</p>
+          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyle}`}>
+            {STATUS_LABELS[status] || STATUS_LABELS.todo}
+          </span>
+          {resource.learning_status?.score && (
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+              {resource.learning_status.score}
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-400">{TYPE_LABELS[resource.type]}</p>
       </div>
 
@@ -176,6 +200,8 @@ function ChapterCard({ chapter, onView, onMark }) {
     .filter(({ resources }) => resources.length > 0);
 
   const totalResources = chapter.resources?.length || 0;
+  const summary = chapter.learning_summary || { total: totalResources, completed: 0, percent: 0, state: 'todo' };
+  const summaryStyle = STATUS_STYLES[summary.state] || STATUS_STYLES.todo;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden">
@@ -190,15 +216,25 @@ function ChapterCard({ chapter, onView, onMark }) {
           <div>
             <h3 className="font-bold text-gray-800">{chapter.title}</h3>
             {totalResources > 0 && (
-              <p className="text-xs text-gray-400">{totalResources} ressource{totalResources > 1 ? 's' : ''}</p>
+              <p className="text-xs text-gray-400">
+                {summary.completed}/{summary.total} etape{summary.total > 1 ? 's' : ''} terminee{summary.completed > 1 ? 's' : ''}
+              </p>
             )}
           </div>
         </div>
-        <span className="text-gray-400">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
+        <div className="flex items-center gap-3">
+          <span className={`hidden rounded-full border px-2 py-1 text-xs font-semibold sm:inline-flex ${summaryStyle}`}>
+            {summary.percent}%
+          </span>
+          <span className="text-gray-400">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
+        </div>
       </div>
 
       {open && (
         <div className="p-5">
+          <div className="mb-4 h-2 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${summary.percent}%` }} />
+          </div>
           {byType.length === 0 ? (
             <p className="text-sm text-gray-400 italic text-center py-4">Aucune ressource disponible dans ce chapitre.</p>
           ) : (

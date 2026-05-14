@@ -19,6 +19,13 @@ class ProgressController extends Controller
         $this->ensureStudentCanAccessResource($request, $resource);
 
         $student = $request->user();
+        $data = $request->validate([
+            'is_completed' => 'sometimes|boolean',
+        ]);
+        $existing = StudentProgress::where('student_id', $student->id)
+            ->where('resource_id', $resource->id)
+            ->first();
+        $completed = (bool) ($data['is_completed'] ?? $existing?->is_completed ?? false);
 
         StudentProgress::updateOrCreate(
             ['student_id' => $student->id, 'resource_id' => $resource->id],
@@ -26,6 +33,8 @@ class ProgressController extends Controller
                 'course_id' => $resource->course_id,
                 'is_viewed' => true,
                 'viewed_at' => now(),
+                'is_completed' => $completed,
+                'completed_at' => $completed ? ($existing?->completed_at ?? now()) : null,
             ]
         );
 

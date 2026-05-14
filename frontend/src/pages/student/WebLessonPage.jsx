@@ -218,6 +218,7 @@ function LessonBlock({ block }) {
 export default function WebLessonPage() {
   const { resourceId } = useParams();
   const [pageIndex, setPageIndex] = useState(0);
+  const [completed, setCompleted] = useState(false);
 
   const { data } = useQuery({
     queryKey: ['student-web-lesson', resourceId],
@@ -231,6 +232,12 @@ export default function WebLessonPage() {
   const pages = data?.lesson?.content?.pages || [];
   const page = pages[pageIndex] || pages[0];
   const percent = pages.length > 0 ? Math.round(((pageIndex + 1) / pages.length) * 100) : 0;
+  const isLastPage = pageIndex >= pages.length - 1;
+
+  const completeLesson = async () => {
+    await api.post(`/student/resources/${resourceId}/view`, { is_completed: true });
+    setCompleted(true);
+  };
 
   return (
     <StudentLayout>
@@ -279,11 +286,11 @@ export default function WebLessonPage() {
             </button>
             <button
               type="button"
-              onClick={() => setPageIndex(index => Math.min(pages.length - 1, index + 1))}
-              disabled={pageIndex >= pages.length - 1}
+              onClick={() => isLastPage ? completeLesson() : setPageIndex(index => Math.min(pages.length - 1, index + 1))}
+              disabled={isLastPage && completed}
               className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
             >
-              Suivant <ChevronRight size={16} />
+              {isLastPage ? (completed ? 'Lecon terminee' : 'Terminer la lecon') : <>Suivant <ChevronRight size={16} /></>}
             </button>
           </div>
         </article>

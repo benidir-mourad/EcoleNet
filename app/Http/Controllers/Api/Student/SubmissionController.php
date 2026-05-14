@@ -56,7 +56,9 @@ class SubmissionController extends Controller
             [
                 'course_id' => $exercise->resource->course_id,
                 'is_viewed' => true,
+                'is_completed' => true,
                 'viewed_at' => now(),
+                'completed_at' => now(),
             ]
         );
 
@@ -120,7 +122,9 @@ class SubmissionController extends Controller
             [
                 'course_id' => $resource->course_id,
                 'is_viewed' => true,
+                'is_completed' => true,
                 'viewed_at' => now(),
+                'completed_at' => now(),
             ]
         );
 

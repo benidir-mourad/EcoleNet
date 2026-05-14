@@ -135,6 +135,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('stats/overview',            [StatsController::class, 'overview']);
         Route::get('stats/courses',             [StatsController::class, 'allCourses']);
         Route::get('courses/{course}/stats',    [StatsController::class, 'course']);
+        Route::get('courses/{course}/chapter-progress', [StatsController::class, 'chapterProgress']);
     });
 
     // ── Student routes ────────────────────────────────────────────────────────

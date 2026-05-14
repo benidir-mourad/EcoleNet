@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Exercise;
 use App\Models\ExerciseSubmission;
+use App\Models\Chapter;
 use App\Models\QcmAttempt;
 use App\Models\StudentProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -158,5 +159,76 @@ class EnrollmentStatsApiTest extends TestCase
             ->assertJsonPath('pedagogical_alerts.at_risk_students.0.course_id', $course->id)
             ->assertJsonPath('course_health.0.pending_corrections', 1)
             ->assertJsonPath('recent_activity.submissions.0.status', 'submitted');
+    }
+
+    public function test_teacher_can_view_chapter_progress_by_student(): void
+    {
+        $teacher = $this->user('teacher');
+        $student = $this->user('student', 'active', [
+            'first_name' => 'Ada',
+            'last_name' => 'Lovelace',
+        ]);
+        $inactiveStudent = $this->user('student', 'active', [
+            'first_name' => 'Grace',
+            'last_name' => 'Hopper',
+        ]);
+        $course = $this->courseForTeacher($teacher);
+        $chapter = Chapter::create(['course_id' => $course->id, 'title' => 'HTML bases', 'order' => 1]);
+        $lesson = $this->resourceForCourse($course, [
+            'chapter_id' => $chapter->id,
+            'title' => 'Cours HTML',
+            'file_type' => 'web_lesson',
+            'is_visible' => true,
+        ]);
+        $exerciseResource = $this->resourceForCourse($course, [
+            'chapter_id' => $chapter->id,
+            'title' => 'Balises HTML',
+            'type' => 'exercise',
+            'file_type' => 'code_editor',
+            'is_visible' => true,
+            'order' => 2,
+        ]);
+        $exercise = Exercise::create([
+            'resource_id' => $exerciseResource->id,
+            'title' => 'Balises HTML',
+            'type' => 'code_editor',
+            'max_score' => 20,
+            'auto_correct' => true,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+        $this->enroll($inactiveStudent, $course->section->schoolClass);
+
+        StudentProgress::create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'resource_id' => $lesson->id,
+            'is_viewed' => true,
+            'is_completed' => true,
+            'viewed_at' => now(),
+            'completed_at' => now(),
+        ]);
+        ExerciseSubmission::create([
+            'exercise_id' => $exercise->id,
+            'student_id' => $student->id,
+            'content' => '<h1>Titre</h1>',
+            'score' => 16,
+            'status' => 'corrected',
+            'submitted_at' => now(),
+            'corrected_at' => now(),
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->getJson("/api/teacher/courses/{$course->id}/chapter-progress")
+            ->assertOk()
+            ->assertJsonPath('course.student_count', 2)
+            ->assertJsonPath('chapters.0.title', 'HTML bases')
+            ->assertJsonPath('chapters.0.avg_percent', 50)
+            ->assertJsonPath('chapters.0.completed_students', 1)
+            ->assertJsonPath('chapters.0.students_to_follow', 1)
+            ->assertJsonPath('chapters.0.students.0.student_name', 'Ada Lovelace')
+            ->assertJsonPath('chapters.0.students.0.percent', 100)
+            ->assertJsonPath('chapters.0.students.0.avg_score_percent', 80)
+            ->assertJsonPath('chapters.0.students.1.student_name', 'Grace Hopper')
+            ->assertJsonPath('chapters.0.students.1.needs_attention', true);
     }
 }

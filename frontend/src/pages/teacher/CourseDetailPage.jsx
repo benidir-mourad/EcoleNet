@@ -50,6 +50,11 @@ const TYPE_STYLE = {
 
 const INTERACTIVE_TYPES = ['exercise', 'revision', 'evaluation'];
 const VIEWABLE_TYPES    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
+const TRACKING_FILTERS = [
+  { value: 'all', label: 'Tous' },
+  { value: 'attention', label: 'A relancer' },
+  { value: 'completed', label: 'Termines' },
+];
 
 /* ─── ResourceCard ─────────────────────────────────────────────────────── */
 
@@ -646,6 +651,103 @@ function ChapterSection({ chapter, courseId, onPreview }) {
   );
 }
 
+function ChapterTrackingPanel({ courseId }) {
+  const [selectedChapterId, setSelectedChapterId] = useState(null);
+  const [filter, setFilter] = useState('all');
+
+  const { data } = useQuery({
+    queryKey: ['teacher-chapter-progress', courseId],
+    queryFn: () => api.get(`/teacher/courses/${courseId}/chapter-progress`).then(r => r.data),
+  });
+
+  const chapters = data?.chapters || [];
+  const selectedChapter = chapters.find(chapter => chapter.chapter_id === selectedChapterId) || chapters[0];
+  const students = (selectedChapter?.students || []).filter(student => {
+    if (filter === 'attention') return student.needs_attention;
+    if (filter === 'completed') return student.state === 'completed';
+    return true;
+  });
+
+  if (chapters.length === 0) return null;
+
+  return (
+    <section className="mb-6 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <h2 className="font-bold text-gray-800">Suivi par chapitre</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {data?.course?.student_count || 0} eleve{(data?.course?.student_count || 0) > 1 ? 's' : ''} inscrit{(data?.course?.student_count || 0) > 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {TRACKING_FILTERS.map(item => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setFilter(item.value)}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium ${filter === item.value ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-[280px_1fr]">
+        <div className="grid gap-2">
+          {chapters.map(chapter => (
+            <button
+              key={chapter.chapter_id}
+              type="button"
+              onClick={() => setSelectedChapterId(chapter.chapter_id)}
+              className={`rounded-xl border p-3 text-left transition ${selectedChapter?.chapter_id === chapter.chapter_id ? 'border-indigo-300 bg-indigo-50' : 'border-gray-100 hover:border-indigo-200'}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate text-sm font-semibold text-gray-800">{chapter.title}</p>
+                <span className="text-xs font-bold text-indigo-700">{chapter.avg_percent}%</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100">
+                <div className="h-full rounded-full bg-indigo-500" style={{ width: `${chapter.avg_percent}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                {chapter.completed_students} termine, {chapter.students_to_follow} a relancer
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-gray-100">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[1.4fr_110px_100px_120px_120px] gap-3 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase text-gray-500">
+              <span>Eleve</span>
+              <span>Progression</span>
+              <span>Score</span>
+              <span>Activite</span>
+              <span>Statut</span>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {students.map(student => (
+                <div key={student.student_id} className="grid grid-cols-[1.4fr_110px_100px_120px_120px] gap-3 px-4 py-3 text-sm">
+                  <span className="font-medium text-gray-800">{student.student_name}</span>
+                  <span className="text-gray-600">{student.completed}/{student.total} ({student.percent}%)</span>
+                  <span className="text-gray-600">{student.avg_score_percent ?? '-'}{student.avg_score_percent !== null ? '%' : ''}</span>
+                  <span className="text-gray-500">{student.last_activity_at ? new Date(student.last_activity_at).toLocaleDateString('fr-BE') : '-'}</span>
+                  <span className={`rounded-full px-2 py-1 text-center text-xs font-semibold ${student.needs_attention ? 'bg-amber-50 text-amber-700' : student.state === 'completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-600'}`}>
+                    {student.needs_attention ? 'A relancer' : student.state === 'completed' ? 'Termine' : student.state === 'in_progress' ? 'En cours' : 'A faire'}
+                  </span>
+                </div>
+              ))}
+              {students.length === 0 && (
+                <div className="px-4 py-8 text-center text-sm text-gray-400">Aucun eleve pour ce filtre.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── CourseDetailPage ──────────────────────────────────────────────────── */
 
 export default function CourseDetailPage() {
@@ -748,6 +850,8 @@ export default function CourseDetailPage() {
           </div>
         </div>
       </div>
+
+      <ChapterTrackingPanel courseId={courseId} />
 
       {/* Chapters */}
       <div className="grid gap-5">

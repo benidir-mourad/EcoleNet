@@ -81,6 +81,110 @@ class StatsController extends Controller
         ]);
     }
 
+    public function chapterProgress(Request $request, Course $course)
+    {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
+        $course->load([
+            'section.schoolClass',
+            'chapters.resources' => fn ($query) => $query->where('is_visible', true)->with('exercise')->orderBy('order')->orderBy('id'),
+        ]);
+
+        $students = Enrollment::where('class_id', $course->section?->class_id)
+            ->where('status', 'approved')
+            ->with('student')
+            ->get()
+            ->pluck('student')
+            ->filter()
+            ->values();
+
+        $resources = $course->chapters->flatMap(fn ($chapter) => $chapter->resources);
+        $resourceIds = $resources->pluck('id')->values();
+        $exerciseIds = $resources->pluck('exercise.id')->filter()->values();
+        $studentIds = $students->pluck('id')->values();
+
+        $progress = StudentProgress::whereIn('student_id', $studentIds)
+            ->whereIn('resource_id', $resourceIds)
+            ->get()
+            ->groupBy('student_id');
+        $submissions = ExerciseSubmission::whereIn('student_id', $studentIds)
+            ->whereIn('exercise_id', $exerciseIds)
+            ->with('exercise')
+            ->latest('submitted_at')
+            ->get()
+            ->groupBy('student_id');
+        $qcmAttempts = QcmAttempt::whereIn('student_id', $studentIds)
+            ->whereIn('resource_id', $resourceIds)
+            ->latest('completed_at')
+            ->get()
+            ->groupBy('student_id');
+
+        $chapters = $course->chapters->map(function ($chapter) use ($students, $progress, $submissions, $qcmAttempts) {
+            $chapterResourceIds = $chapter->resources->pluck('id');
+            $chapterExerciseIds = $chapter->resources->pluck('exercise.id')->filter();
+            $total = $chapter->resources->count();
+
+            $rows = $students->map(function ($student) use ($chapter, $chapterResourceIds, $chapterExerciseIds, $total, $progress, $submissions, $qcmAttempts) {
+                $studentProgress = $progress->get($student->id, collect())->whereIn('resource_id', $chapterResourceIds);
+                $studentSubmissions = $submissions->get($student->id, collect())->whereIn('exercise_id', $chapterExerciseIds);
+                $studentAttempts = $qcmAttempts->get($student->id, collect())->whereIn('resource_id', $chapterResourceIds);
+
+                $completedResourceIds = $studentProgress->where('is_completed', true)->pluck('resource_id')
+                    ->merge($studentSubmissions->pluck('exercise.resource_id'))
+                    ->merge($studentAttempts->pluck('resource_id'))
+                    ->unique();
+                $viewed = $studentProgress->where('is_viewed', true)->pluck('resource_id')->merge($completedResourceIds)->unique()->count();
+                $completed = $completedResourceIds->count();
+                $scoreParts = $studentSubmissions
+                    ->filter(fn ($submission) => $submission->score !== null && $submission->exercise?->max_score)
+                    ->map(fn ($submission) => ($submission->score / max($submission->exercise->max_score, 1)) * 100)
+                    ->merge($studentAttempts->map(fn ($attempt) => $attempt->max_score > 0 ? ($attempt->score / $attempt->max_score) * 100 : null)->filter());
+                $lastActivity = collect([
+                    $studentProgress->max('viewed_at'),
+                    $studentProgress->max('completed_at'),
+                    $studentSubmissions->max('submitted_at'),
+                    $studentAttempts->max('completed_at'),
+                ])->filter()->max();
+                $percent = $total > 0 ? round(($completed / $total) * 100) : 0;
+                $inactive = !$lastActivity || $lastActivity->lt(now()->subDays(7));
+
+                return [
+                    'student_id' => $student->id,
+                    'student_name' => $student->full_name,
+                    'chapter_id' => $chapter->id,
+                    'viewed' => $viewed,
+                    'completed' => $completed,
+                    'total' => $total,
+                    'percent' => $percent,
+                    'avg_score_percent' => $scoreParts->isNotEmpty() ? round($scoreParts->avg(), 1) : null,
+                    'last_activity_at' => $lastActivity,
+                    'state' => $total > 0 && $completed === $total ? 'completed' : ($viewed > 0 || $completed > 0 ? 'in_progress' : 'todo'),
+                    'needs_attention' => $total > 0 && ($percent < 50 || $inactive),
+                ];
+            });
+
+            return [
+                'chapter_id' => $chapter->id,
+                'title' => $chapter->title,
+                'total_resources' => $total,
+                'avg_percent' => $rows->isNotEmpty() ? round($rows->avg('percent'), 1) : 0,
+                'completed_students' => $rows->where('state', 'completed')->count(),
+                'students_to_follow' => $rows->where('needs_attention', true)->count(),
+                'students' => $rows->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'course' => [
+                'id' => $course->id,
+                'name' => $course->name,
+                'class_name' => $course->section?->schoolClass?->name,
+                'student_count' => $students->count(),
+            ],
+            'chapters' => $chapters,
+        ]);
+    }
+
     private function teacherInsights(int $teacherId): array
     {
         $courses = Course::where('teacher_id', $teacherId)

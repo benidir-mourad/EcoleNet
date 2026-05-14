@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Enrollment;
 use App\Models\Exercise;
 use App\Models\ExerciseSubmission;
+use App\Models\Notification;
 use App\Models\SchoolClass;
 use App\Models\StudentProgress;
 use Illuminate\Http\Request;
@@ -36,7 +37,9 @@ class DashboardController extends Controller
                 'upcoming_deadlines' => 0,
             ],
             'upcoming_deadlines' => [],
+            'action_items'       => [],
             'recent_resources'   => [],
+            'recent_notifications' => [],
             'exercises_to_finish'=> [],
             'progress_by_course' => [],
         ];
@@ -114,6 +117,15 @@ class DashboardController extends Controller
             ->map(fn($exercise) => $this->formatExerciseCard($exercise, $submissions->get($exercise->id)))
             ->values();
 
+        $actionItems = $allExercisesToFinish
+            ->map(fn($exercise) => $this->formatActionItem($exercise, $submissions->get($exercise->id)))
+            ->sortBy([
+                ['priority', 'asc'],
+                ['deadline_sort', 'asc'],
+            ])
+            ->take(5)
+            ->values();
+
         $recentResources = $progress
             ->filter(fn($item) => $item->is_viewed && $item->viewed_at)
             ->sortByDesc(fn($item) => $item->viewed_at->timestamp)
@@ -128,6 +140,28 @@ class DashboardController extends Controller
             ])
             ->values();
 
+        $recentNotifications = Notification::where('user_id', $studentId)
+            ->whereIn('type', [
+                'new_exercise',
+                'submission_corrected',
+                'teacher_message',
+                'forum_reply',
+                'enrollment_approved',
+            ])
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn($notification) => [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->title,
+                'body' => $notification->body,
+                'url' => $notification->data['url'] ?? null,
+                'read_at' => $notification->read_at,
+                'created_at' => $notification->created_at,
+            ])
+            ->values();
+
         return [
             'stats' => [
                 'sections'           => $sections->count(),
@@ -136,9 +170,12 @@ class DashboardController extends Controller
                 'viewed_resources'   => $progress->where('is_viewed', true)->count(),
                 'pending_exercises'  => $allExercisesToFinish->count(),
                 'upcoming_deadlines' => $upcomingDeadlines->count(),
+                'action_items'       => $actionItems->count(),
             ],
             'upcoming_deadlines'  => $upcomingDeadlines,
+            'action_items'        => $actionItems,
             'recent_resources'    => $recentResources,
+            'recent_notifications'=> $recentNotifications,
             'exercises_to_finish' => $exercisesToFinish,
             'progress_by_course'  => $progressByCourse,
         ];
@@ -158,6 +195,37 @@ class DashboardController extends Controller
             'submission_status' => $submission?->status,
             'submitted_at'      => $submission?->submitted_at,
             'url'               => "/student/courses/{$exercise->resource?->course_id}",
+        ];
+    }
+
+    private function formatActionItem(Exercise $exercise, ?ExerciseSubmission $submission): array
+    {
+        $deadline = $exercise->deadline;
+        $isSubmitted = $submission && $submission->status !== 'corrected';
+        $isOverdue = !$isSubmitted && $deadline?->isPast();
+        $isDueSoon = !$isSubmitted && $deadline?->isFuture() && $deadline->lte(now()->addDays(3));
+
+        if ($isOverdue) {
+            $priority = 1;
+            $status = 'En retard';
+        } elseif ($isDueSoon) {
+            $priority = 2;
+            $status = 'Bientot';
+        } elseif ($isSubmitted) {
+            $priority = 3;
+            $status = 'Remis';
+        } else {
+            $priority = 4;
+            $status = 'A faire';
+        }
+
+        return [
+            ...$this->formatExerciseCard($exercise, $submission),
+            'priority' => $priority,
+            'deadline_sort' => $deadline?->timestamp ?? PHP_INT_MAX,
+            'status_label' => $status,
+            'is_overdue' => $isOverdue,
+            'is_due_soon' => $isDueSoon,
         ];
     }
 

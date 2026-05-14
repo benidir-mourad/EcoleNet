@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Exercise;
+use App\Models\ExerciseSubmission;
+use App\Models\Notification;
 use App\Models\Resource;
 use App\Models\SchoolClass;
 use App\Models\Section;
@@ -62,9 +64,101 @@ class StudentDashboardNotificationsTest extends TestCase
             ->assertJsonPath('stats.visible_resources', 1)
             ->assertJsonPath('stats.viewed_resources', 1)
             ->assertJsonPath('stats.pending_exercises', 1)
+            ->assertJsonPath('stats.action_items', 1)
+            ->assertJsonPath('action_items.0.title', 'Rendu PHP')
             ->assertJsonPath('upcoming_deadlines.0.title', 'Rendu PHP')
             ->assertJsonPath('recent_resources.0.title', 'Rendu PHP')
             ->assertJsonPath('progress_by_course.0.percent', 100);
+    }
+
+    public function test_student_dashboard_prioritizes_action_items_and_recent_notifications(): void
+    {
+        $teacher = $this->user('teacher');
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($teacher);
+
+        $overdueResource = Resource::create([
+            'course_id' => $course->id,
+            'type' => 'exercise',
+            'file_type' => 'file_upload',
+            'title' => 'Projet SQL',
+            'is_visible' => true,
+            'order' => 1,
+        ]);
+        $soonResource = Resource::create([
+            'course_id' => $course->id,
+            'type' => 'exercise',
+            'file_type' => 'code_editor',
+            'title' => 'DOM JS',
+            'is_visible' => true,
+            'order' => 2,
+        ]);
+        $submittedResource = Resource::create([
+            'course_id' => $course->id,
+            'type' => 'exercise',
+            'file_type' => 'file_upload',
+            'title' => 'PHP formulaire',
+            'is_visible' => true,
+            'order' => 3,
+        ]);
+
+        $overdue = Exercise::create([
+            'resource_id' => $overdueResource->id,
+            'title' => 'Projet SQL',
+            'type' => 'file_upload',
+            'deadline' => now()->subDay(),
+            'max_score' => 20,
+            'auto_correct' => false,
+        ]);
+        Exercise::create([
+            'resource_id' => $soonResource->id,
+            'title' => 'DOM JS',
+            'type' => 'code_editor',
+            'deadline' => now()->addDay(),
+            'max_score' => 20,
+            'auto_correct' => true,
+        ]);
+        $submitted = Exercise::create([
+            'resource_id' => $submittedResource->id,
+            'title' => 'PHP formulaire',
+            'type' => 'file_upload',
+            'deadline' => now()->addDays(5),
+            'max_score' => 20,
+            'auto_correct' => false,
+        ]);
+
+        Enrollment::create([
+            'student_id' => $student->id,
+            'class_id' => $course->section->class_id,
+            'status' => 'approved',
+        ]);
+        ExerciseSubmission::create([
+            'exercise_id' => $submitted->id,
+            'student_id' => $student->id,
+            'content' => 'Mon rendu',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+        Notification::create([
+            'user_id' => $student->id,
+            'type' => 'submission_corrected',
+            'title' => 'Correction disponible',
+            'body' => 'Ta correction est disponible.',
+            'data' => ['url' => "/student/resources/{$overdueResource->id}/exercise"],
+        ]);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/student/dashboard')
+            ->assertOk()
+            ->assertJsonPath('stats.action_items', 3)
+            ->assertJsonPath('action_items.0.title', 'Projet SQL')
+            ->assertJsonPath('action_items.0.status_label', 'En retard')
+            ->assertJsonPath('action_items.1.title', 'DOM JS')
+            ->assertJsonPath('action_items.1.status_label', 'Bientot')
+            ->assertJsonPath('action_items.2.title', 'PHP formulaire')
+            ->assertJsonPath('action_items.2.status_label', 'Remis')
+            ->assertJsonPath('recent_notifications.0.type', 'submission_corrected')
+            ->assertJsonPath('recent_notifications.0.url', "/student/resources/{$overdueResource->id}/exercise");
     }
 
     public function test_approving_enrollment_creates_student_notification(): void

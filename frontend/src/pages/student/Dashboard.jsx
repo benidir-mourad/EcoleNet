@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  BookOpen, CalendarClock, CheckCircle2, Clock, FileText,
+  AlertTriangle, Bell, BookOpen, CalendarClock, CheckCircle2, Clock, FileText,
   GraduationCap, History, ListChecks, TrendingUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -84,6 +84,69 @@ function ExerciseList({ items, emptyText }) {
           </p>
         </Link>
       ))}
+    </div>
+  );
+}
+
+function ActionItems({ items }) {
+  if (!items?.length) return <EmptyState>Aucune priorite urgente pour le moment.</EmptyState>;
+
+  const toneFor = (item) => {
+    if (item.is_overdue) return 'bg-red-50 text-red-700 border-red-100';
+    if (item.is_due_soon) return 'bg-amber-50 text-amber-700 border-amber-100';
+    if (item.submission_status === 'submitted') return 'bg-blue-50 text-blue-700 border-blue-100';
+    return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.map(item => (
+        <Link
+          key={`action-${item.exercise_id}-${item.resource_id}`}
+          to={exerciseUrl(item)}
+          className="block rounded-lg border border-gray-100 bg-white p-3 transition hover:border-emerald-200 hover:bg-emerald-50"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-gray-900">{item.title}</p>
+              <p className="mt-0.5 truncate text-xs text-gray-500">{item.course_name}</p>
+            </div>
+            <span className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-semibold ${toneFor(item)}`}>
+              {item.status_label}
+            </span>
+          </div>
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
+            <CalendarClock size={13} /> {formatDate(item.deadline)}
+          </p>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function NotificationPreview({ items }) {
+  if (!items?.length) return <EmptyState>Aucune notification recente.</EmptyState>;
+
+  return (
+    <div className="space-y-2">
+      {items.map(item => {
+        const content = (
+          <div className="rounded-lg border border-gray-100 bg-white p-3 transition hover:border-emerald-200 hover:bg-emerald-50">
+            <div className="flex items-start gap-2">
+              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read_at ? 'bg-gray-200' : 'bg-emerald-500'}`} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-gray-900">{item.title}</p>
+                {item.body && <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{item.body}</p>}
+                <p className="mt-1 text-xs text-gray-400">{formatDate(item.created_at)}</p>
+              </div>
+            </div>
+          </div>
+        );
+
+        return item.url
+          ? <Link key={item.id} to={item.url}>{content}</Link>
+          : <div key={item.id}>{content}</div>;
+      })}
     </div>
   );
 }
@@ -198,6 +261,24 @@ export default function StudentDashboard() {
         <StatCard icon={FileText} label="Ressources" value={stats.visible_resources} tone="bg-purple-50 text-purple-600" />
         <StatCard icon={ListChecks} label="Exercices à finir" value={stats.pending_exercises} tone="bg-amber-50 text-amber-600" />
         <StatCard icon={CheckCircle2} label="Consultées" value={stats.viewed_resources} tone="bg-emerald-50 text-emerald-600" />
+      </div>
+
+      <div className="mb-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <section className="rounded-lg bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <AlertTriangle size={19} className="text-amber-500" />
+            <h2 className="font-semibold text-gray-800">A faire maintenant</h2>
+          </div>
+          <ActionItems items={data?.action_items} />
+        </section>
+
+        <section className="rounded-lg bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Bell size={19} className="text-emerald-600" />
+            <h2 className="font-semibold text-gray-800">Dernieres notifications utiles</h2>
+          </div>
+          <NotificationPreview items={data?.recent_notifications} />
+        </section>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">

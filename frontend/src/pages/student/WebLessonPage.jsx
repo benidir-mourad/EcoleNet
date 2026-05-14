@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import api from '../../services/api';
 import StudentLayout from '../../components/layout/StudentLayout';
 
@@ -30,6 +30,20 @@ const splitFillBlankText = (text = '') => {
   }
 
   return parts;
+};
+
+const exercisePath = (resource) => {
+  const paths = {
+    qcm: 'qcm',
+    drag_drop: 'dragdrop',
+    fill_blanks: 'fill-blanks',
+    ordering: 'ordering',
+    code_editor: 'code-editor',
+    truth_table: 'truth-table',
+    file_upload: 'exercise',
+  };
+
+  return paths[resource?.file_type] ? `/student/resources/${resource.id}/${paths[resource.file_type]}` : null;
 };
 
 function LessonBlock({ block }) {
@@ -168,6 +182,31 @@ function LessonBlock({ block }) {
         </div>
         {quizChecked && block.explanation && (
           <p className="mt-3 rounded-xl bg-white/70 px-4 py-3 text-sm text-gray-700">{block.explanation}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (block.type === 'exercise_link') {
+    const linkedResource = block.linked_resource;
+    const path = exercisePath(linkedResource);
+
+    return (
+      <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5">
+        <p className="text-sm font-semibold uppercase tracking-wide text-violet-700">Exercice associe</p>
+        <h3 className="mt-2 text-lg font-bold text-gray-900">{linkedResource?.title || 'Exercice indisponible'}</h3>
+        {block.text && <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700">{block.text}</p>}
+        {path ? (
+          <Link
+            to={path}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700"
+          >
+            {block.button_label || 'Commencer l exercice'} <ExternalLink size={15} />
+          </Link>
+        ) : (
+          <p className="mt-4 rounded-lg bg-white/70 px-3 py-2 text-sm text-violet-700">
+            Cet exercice n'est pas encore disponible pour les eleves.
+          </p>
         )}
       </div>
     );

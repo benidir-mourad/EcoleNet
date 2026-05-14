@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen, CheckSquare, Code2, FileText, Heading, MessageSquare, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckSquare, Code2, FileText, Heading, Link as LinkIcon, MessageSquare, Plus, Save, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
@@ -13,6 +13,7 @@ const BLOCK_TYPES = [
   { type: 'callout', label: 'Encadre', icon: BookOpen },
   { type: 'fill_blank', label: 'Texte a trous', icon: FileText },
   { type: 'quiz', label: 'QCM rapide', icon: CheckSquare },
+  { type: 'exercise_link', label: 'Exercice associe', icon: LinkIcon },
 ];
 
 const emptyPage = (title = 'Nouvelle page') => ({
@@ -45,6 +46,7 @@ const newBlock = (type) => {
       explanation: '',
     };
   }
+  if (type === 'exercise_link') return { type, exercise_resource_id: '', text: '', button_label: 'Commencer l exercice' };
   return { type, text: '' };
 };
 
@@ -84,6 +86,7 @@ export default function WebLessonBuilderPage() {
   });
 
   const page = pages[currentPage] || pages[0];
+  const availableExercises = data?.available_exercises || [];
 
   const updatePage = (patch) => {
     setPages(items => items.map((item, index) => index === currentPage ? { ...item, ...patch } : item));
@@ -348,6 +351,39 @@ export default function WebLessonBuilderPage() {
                       className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       placeholder="Explication apres correction (optionnel)"
                     />
+                  </div>
+                ) : block.type === 'exercise_link' ? (
+                  <div className="grid gap-3">
+                    <select
+                      value={block.exercise_resource_id || ''}
+                      onChange={e => updateBlock(index, { exercise_resource_id: e.target.value ? Number(e.target.value) : '' })}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Choisir un exercice du cours</option>
+                      {availableExercises.map(exercise => (
+                        <option key={exercise.id} value={exercise.id}>
+                          {exercise.title} - {exercise.file_type?.replace('_', ' ')}
+                        </option>
+                      ))}
+                    </select>
+                    <textarea
+                      value={block.text || ''}
+                      onChange={e => updateBlock(index, { text: e.target.value })}
+                      rows={3}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Texte court avant le bouton, ex : Entrainez-vous maintenant avec l exercice associe."
+                    />
+                    <input
+                      value={block.button_label || ''}
+                      onChange={e => updateBlock(index, { button_label: e.target.value })}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Libelle du bouton"
+                    />
+                    {availableExercises.length === 0 && (
+                      <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                        Creez d'abord un exercice interactif dans ce cours pour pouvoir l'associer.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <textarea

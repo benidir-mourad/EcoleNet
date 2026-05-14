@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Chapter;
+use App\Models\Exercise;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -256,5 +257,94 @@ class TeacherContentApiTest extends TestCase
             ->assertJsonPath('lesson.content.pages.0.blocks.0.type', 'quiz')
             ->assertJsonPath('lesson.content.pages.0.blocks.0.options.1.label', 'const')
             ->assertJsonPath('lesson.content.pages.0.blocks.0.options.1.is_correct', true);
+    }
+
+    public function test_teacher_can_link_course_exercise_inside_web_lesson(): void
+    {
+        $teacher = $this->user('teacher');
+        $student = $this->user('student');
+        $course = $this->courseForTeacher($teacher);
+        $lessonResource = $this->resourceForCourse($course, [
+            'type' => 'presentation',
+            'title' => 'Cours SQL',
+            'is_visible' => false,
+        ]);
+        $exerciseResource = $this->resourceForCourse($course, [
+            'type' => 'exercise',
+            'title' => 'Filtrer en SQL',
+            'file_type' => 'code_editor',
+            'is_visible' => true,
+            'order' => 2,
+        ]);
+        Exercise::create([
+            'resource_id' => $exerciseResource->id,
+            'title' => 'Filtrer en SQL',
+            'type' => 'code_editor',
+            'content' => ['language' => 'sql', 'tests' => []],
+            'max_score' => 10,
+            'auto_correct' => false,
+        ]);
+        $this->enroll($student, $course->section->schoolClass);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->getJson("/api/teacher/resources/{$lessonResource->id}/web-lesson")
+            ->assertOk()
+            ->assertJsonPath('available_exercises.0.id', $exerciseResource->id);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$lessonResource->id}/web-lesson", [
+                'content' => [
+                    'pages' => [[
+                        'title' => 'Mise en pratique',
+                        'blocks' => [[
+                            'type' => 'exercise_link',
+                            'exercise_resource_id' => $exerciseResource->id,
+                            'text' => 'Appliquez le filtre WHERE dans un exercice court.',
+                            'button_label' => 'Faire l exercice SQL',
+                        ]],
+                    ]],
+                ],
+                'is_visible' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.type', 'exercise_link')
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.exercise_resource_id', $exerciseResource->id);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson("/api/student/resources/{$lessonResource->id}/web-lesson")
+            ->assertOk()
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.linked_resource.id', $exerciseResource->id)
+            ->assertJsonPath('lesson.content.pages.0.blocks.0.linked_resource.file_type', 'code_editor');
+    }
+
+    public function test_teacher_cannot_link_exercise_from_another_course_inside_web_lesson(): void
+    {
+        $teacher = $this->user('teacher');
+        $course = $this->courseForTeacher($teacher);
+        $otherCourse = $this->courseForTeacher($teacher);
+        $lessonResource = $this->resourceForCourse($course, [
+            'type' => 'presentation',
+            'title' => 'Cours HTML',
+        ]);
+        $foreignExercise = $this->resourceForCourse($otherCourse, [
+            'type' => 'exercise',
+            'title' => 'Exercice externe',
+            'file_type' => 'code_editor',
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/resources/{$lessonResource->id}/web-lesson", [
+                'content' => [
+                    'pages' => [[
+                        'title' => 'Lien invalide',
+                        'blocks' => [[
+                            'type' => 'exercise_link',
+                            'exercise_resource_id' => $foreignExercise->id,
+                        ]],
+                    ]],
+                ],
+                'is_visible' => true,
+            ])
+            ->assertStatus(422);
     }
 }

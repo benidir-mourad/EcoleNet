@@ -32,6 +32,7 @@ class CommunicationNotificationsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('unread_count', 1)
             ->assertJsonPath('notifications.0.data.message_id', $notificationId)
+            ->assertJsonPath('notifications.0.data.url', "/student/messages?message={$notificationId}")
             ->json('notifications.0');
 
         $this->actingAs($student, 'sanctum')
@@ -86,6 +87,7 @@ class CommunicationNotificationsApiTest extends TestCase
             ->getJson('/api/notifications')
             ->assertOk()
             ->assertJsonPath('notifications.0.type', 'forum_reply')
-            ->assertJsonPath('notifications.0.data.post_id', $post->id);
+            ->assertJsonPath('notifications.0.data.post_id', $post->id)
+            ->assertJsonPath('notifications.0.data.url', "/student/courses/{$course->id}/forum?post={$post->id}");
     }
 }

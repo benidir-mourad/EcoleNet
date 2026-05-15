@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { storageUrl } from '../../config';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageCircle, Pin, Trash2, Plus, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -43,9 +43,11 @@ function ReplyItem({ reply, onDelete }) {
   );
 }
 
-function PostCard({ post, courseId, onDelete, onPin }) {
+function PostCard({ post, courseId, onDelete, onPin, focusedPostId }) {
   const qc = useQueryClient();
-  const [expanded, setExpanded] = useState(false);
+  const isFocused = focusedPostId === String(post.id);
+  const cardRef = useRef(null);
+  const [expanded, setExpanded] = useState(isFocused);
   const [replyText, setReplyText] = useState('');
 
   const sendReply = useMutation({
@@ -58,8 +60,15 @@ function PostCard({ post, courseId, onDelete, onPin }) {
     onError: () => toast.error('Erreur lors de la réponse'),
   });
 
+  useEffect(() => {
+    if (!isFocused) return;
+
+    setExpanded(true);
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [isFocused]);
+
   return (
-    <div className={`bg-white rounded-xl shadow-sm p-5 ${post.is_pinned ? 'border-l-4 border-l-amber-400' : ''}`}>
+    <div ref={cardRef} className={`bg-white rounded-xl shadow-sm p-5 ${post.is_pinned ? 'border-l-4 border-l-amber-400' : ''} ${isFocused ? 'ring-2 ring-indigo-300' : ''}`}>
       <div className="flex items-start gap-3">
         <Avatar user={post.user} />
         <div className="flex-1 min-w-0">
@@ -133,6 +142,7 @@ function PostCard({ post, courseId, onDelete, onPin }) {
 export default function TeacherForumPage() {
   const { courseId } = useParams();
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', content: '' });
 
@@ -170,6 +180,7 @@ export default function TeacherForumPage() {
 
   const posts = data?.posts || [];
   const course = courseData?.course;
+  const focusedPostId = searchParams.get('post');
 
   return (
     <TeacherLayout>
@@ -233,6 +244,7 @@ export default function TeacherForumPage() {
             key={post.id}
             post={post}
             courseId={courseId}
+            focusedPostId={focusedPostId}
             onDelete={(id) => confirm('Supprimer ce post ?') && deletePost.mutate(id)}
             onPin={(id) => pinPost.mutate(id)}
           />

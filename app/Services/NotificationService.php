@@ -78,9 +78,26 @@ class NotificationService
                 'resource_id' => $resource->id,
                 'course_id'   => $resource->course_id,
                 'deadline'    => $exercise->deadline,
-                'url'         => "/student/courses/{$resource->course_id}",
+                'url'         => $this->studentExerciseUrl($exercise),
             ]
         );
+    }
+
+    public function studentExerciseUrl(Exercise $exercise): string
+    {
+        $exercise->loadMissing('resource');
+        $resourceId = $exercise->resource_id;
+
+        return match ($exercise->type) {
+            'qcm' => "/student/resources/{$resourceId}/qcm",
+            'drag_drop' => "/student/resources/{$resourceId}/dragdrop",
+            'file_upload' => "/student/resources/{$resourceId}/exercise",
+            'fill_blanks' => "/student/resources/{$resourceId}/fill-blanks",
+            'ordering' => "/student/resources/{$resourceId}/ordering",
+            'code_editor' => "/student/resources/{$resourceId}/code-editor",
+            'truth_table' => "/student/resources/{$resourceId}/truth-table",
+            default => "/student/courses/{$exercise->resource?->course_id}",
+        };
     }
 
     private function isDisabledForUser(User $user, string $type): bool

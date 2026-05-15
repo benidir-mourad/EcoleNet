@@ -32,9 +32,10 @@ class ForumMessagingApiTest extends TestCase
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $teacher->id,
             'type' => 'forum_post',
+            'data->url' => "/teacher/courses/{$course->id}/forum?post={$postId}",
         ]);
 
-        $this->actingAs($teacher, 'sanctum')
+        $postId = $this->actingAs($teacher, 'sanctum')
             ->patchJson("/api/teacher/forum/{$postId}/pin")
             ->assertOk()
             ->assertJsonPath('post.is_pinned', true);
@@ -49,14 +50,19 @@ class ForumMessagingApiTest extends TestCase
         $this->enroll($student, $course->section->schoolClass);
         $this->enroll($outsider, $this->schoolClass());
 
-        $this->actingAs($teacher, 'sanctum')
+        $postId = $this->actingAs($teacher, 'sanctum')
             ->postJson("/api/teacher/courses/{$course->id}/forum", [
                 'title' => 'Annonce',
                 'content' => 'Contrôle vendredi.',
             ])
-            ->assertCreated();
+            ->assertCreated()
+            ->json('post.id');
 
-        $this->assertDatabaseHas('internal_notifications', ['user_id' => $student->id, 'type' => 'forum_post']);
+        $this->assertDatabaseHas('internal_notifications', [
+            'user_id' => $student->id,
+            'type' => 'forum_post',
+            'data->url' => "/student/courses/{$course->id}/forum?post={$postId}",
+        ]);
         $this->assertDatabaseMissing('internal_notifications', ['user_id' => $outsider->id, 'type' => 'forum_post']);
     }
 
@@ -107,10 +113,11 @@ class ForumMessagingApiTest extends TestCase
         $teacher = $this->user('teacher');
         $student = $this->user('student');
 
-        $this->actingAs($student, 'sanctum')
+        $messageId = $this->actingAs($student, 'sanctum')
             ->postJson('/api/student/messages', ['content' => 'Bonjour professeur'])
             ->assertCreated()
-            ->assertJsonPath('message.receiver_id', $teacher->id);
+            ->assertJsonPath('message.receiver_id', $teacher->id)
+            ->json('message.id');
 
         $this->actingAs($teacher, 'sanctum')
             ->getJson('/api/teacher/messages')
@@ -120,6 +127,7 @@ class ForumMessagingApiTest extends TestCase
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $teacher->id,
             'type' => 'student_message',
+            'data->url' => "/teacher/messages?user={$student->id}&message={$messageId}",
         ]);
     }
 }

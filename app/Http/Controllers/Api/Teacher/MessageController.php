@@ -62,7 +62,7 @@ class MessageController extends Controller
             'teacher_message',
             'Nouveau message',
             "{$request->user()->full_name} t'a envoyé un message.",
-            ['message_id' => $message->id, 'url' => '/student/messages']
+            ['message_id' => $message->id, 'sender_id' => $request->user()->id, 'url' => "/student/messages?message={$message->id}"]
         );
 
         return response()->json(['message' => $message->load('sender', 'receiver')], 201);

@@ -731,7 +731,9 @@ class ExerciseController extends Controller
             'corrected_at'    => now(),
         ]);
 
-        app(NotificationService::class)->create(
+        $notificationService = app(NotificationService::class);
+
+        $notificationService->create(
             $submission->student,
             'submission_corrected',
             'Correction publiée',
@@ -740,7 +742,7 @@ class ExerciseController extends Controller
                 'exercise_id' => $submission->exercise_id,
                 'resource_id' => $submission->exercise->resource_id,
                 'course_id'   => $submission->exercise->resource->course_id,
-                'url'         => "/student/courses/{$submission->exercise->resource->course_id}",
+                'url'         => $notificationService->studentExerciseUrl($submission->exercise),
             ]
         );
 

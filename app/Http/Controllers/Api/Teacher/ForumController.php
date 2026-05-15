@@ -49,7 +49,7 @@ class ForumController extends Controller
                 'forum_post',
                 'Nouveau sujet forum',
                 "Un nouveau sujet a été publié dans {$course->name}.",
-                ['course_id' => $course->id, 'post_id' => $post->id, 'url' => "/student/courses/{$course->id}/forum"]
+                ['course_id' => $course->id, 'post_id' => $post->id, 'url' => "/student/courses/{$course->id}/forum?post={$post->id}"]
             );
         }
 
@@ -85,7 +85,7 @@ class ForumController extends Controller
                 'forum_reply',
                 'Réponse forum',
                 "{$request->user()->full_name} a répondu à ton sujet.",
-                ['course_id' => $post->course_id, 'post_id' => $post->id, 'url' => "/student/courses/{$post->course_id}/forum"]
+                ['course_id' => $post->course_id, 'post_id' => $post->id, 'reply_id' => $reply->id, 'url' => "/student/courses/{$post->course_id}/forum?post={$post->id}"]
             );
         }
 

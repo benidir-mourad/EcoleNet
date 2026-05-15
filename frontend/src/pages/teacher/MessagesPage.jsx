@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
 import useAuthStore from '../../store/authStore';
@@ -8,6 +9,7 @@ import useAuthStore from '../../store/authStore';
 export default function TeacherMessagesPage() {
   const { user } = useAuthStore();
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [selectedUser, setSelectedUser] = useState(null);
   const [content, setContent] = useState('');
   const bottomRef = useRef(null);
@@ -36,12 +38,26 @@ export default function TeacherMessagesPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [convData]);
 
-  const convList = conversations?.conversations || [];
+  const convList = useMemo(() => conversations?.conversations || [], [conversations?.conversations]);
   const messages = convData?.messages || [];
 
   const getPartner = (conv) => {
     return conv.sender_id === user?.id ? conv.receiver : conv.sender;
   };
+
+  useEffect(() => {
+    const userId = searchParams.get('user');
+    if (!userId || selectedUser?.id === Number(userId)) return;
+
+    const conversation = convList.find((conv) => {
+      const partner = conv.sender_id === user?.id ? conv.receiver : conv.sender;
+      return partner?.id === Number(userId);
+    });
+    const partner = conversation
+      ? (conversation.sender_id === user?.id ? conversation.receiver : conversation.sender)
+      : null;
+    if (partner) setSelectedUser(partner);
+  }, [convList, searchParams, selectedUser?.id, user?.id]);
 
   return (
     <TeacherLayout>

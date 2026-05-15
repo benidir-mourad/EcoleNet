@@ -63,6 +63,7 @@ class TeacherExerciseBuilderApiTest extends TestCase
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $student->id,
             'type' => 'new_exercise',
+            'data->url' => "/student/resources/{$resource->id}/code-editor",
         ]);
     }
 
@@ -264,6 +265,7 @@ class TeacherExerciseBuilderApiTest extends TestCase
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $student->id,
             'type' => 'submission_corrected',
+            'data->url' => "/student/resources/{$resource->id}/exercise",
         ]);
     }
 
@@ -299,6 +301,7 @@ class TeacherExerciseBuilderApiTest extends TestCase
         $this->assertDatabaseHas('internal_notifications', [
             'user_id' => $student->id,
             'type' => 'new_exercise',
+            'data->url' => "/student/resources/{$resource->id}/code-editor",
         ]);
 
         $this->actingAs($teacher, 'sanctum')

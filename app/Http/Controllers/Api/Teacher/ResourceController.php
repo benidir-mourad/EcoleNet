@@ -28,7 +28,7 @@ class ResourceController extends Controller
 
         $data = $request->validate([
             'type'         => 'required|in:' . implode(',', Resource::TYPES),
-            'file_type'    => 'nullable|in:pdf,pptx,docx,xlsx,image,video_upload,video_youtube,link,qcm,drag_drop,excel_interactive,file_upload,web_lesson',
+            'file_type'    => 'nullable|in:pdf,pptx,docx,xlsx,image,video_upload,video_youtube,link,qcm,drag_drop,excel_interactive,file_upload,web_lesson,html_embed,html_interactive',
             'title'        => 'required|string|max:200',
             'external_url' => 'nullable|url',
             'is_visible'   => 'boolean',
@@ -75,7 +75,7 @@ class ResourceController extends Controller
         $this->ensureTeacherOwnsResource($request, $resource);
 
         $data = $request->validate([
-            'file_type'    => 'nullable|in:pdf,pptx,docx,xlsx,image,video_upload,video_youtube,link,qcm,drag_drop,excel_interactive,file_upload,web_lesson',
+            'file_type'    => 'nullable|in:pdf,pptx,docx,xlsx,image,video_upload,video_youtube,link,qcm,drag_drop,excel_interactive,file_upload,web_lesson,html_embed,html_interactive',
             'title'        => 'sometimes|string|max:200',
             'external_url' => 'nullable|url',
             'is_visible'   => 'boolean',

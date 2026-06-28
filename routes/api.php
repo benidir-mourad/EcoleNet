@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Teacher\ClassController;
 use App\Http\Controllers\Api\Teacher\SectionController;
@@ -25,8 +26,10 @@ use App\Http\Controllers\Api\Student\WebLessonController as StudentWebLessonCont
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 
 // Public routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login']);
+Route::post('/register',        [AuthController::class, 'register']);
+Route::post('/login',           [AuthController::class, 'login']);
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/reset-password',  [PasswordResetController::class, 'reset']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -55,10 +58,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('sections.courses', CourseController::class)->shallow();
 
         // Library
-        Route::get('library',                        [CourseController::class, 'library']);
-        Route::post('courses/{course}/archive',       [CourseController::class, 'archive']);
-        Route::post('library/{course}/assign',        [CourseController::class, 'assignToSection']);
-        Route::delete('library/{course}',             [CourseController::class, 'destroyFromLibrary']);
+        Route::get('library',                              [CourseController::class, 'library']);
+        Route::post('courses/{course}/archive',             [CourseController::class, 'archive']);
+        Route::post('courses/{course}/organize-chapters',   [CourseController::class, 'organizeRootResources']);
+        Route::post('library/{course}/assign',              [CourseController::class, 'assignToSection']);
+        Route::delete('library/{course}',                   [CourseController::class, 'destroyFromLibrary']);
 
         // Chapters
         Route::post('courses/{course}/chapters',    [ChapterController::class, 'store']);

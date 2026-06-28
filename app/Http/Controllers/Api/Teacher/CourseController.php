@@ -136,9 +136,16 @@ class CourseController extends Controller
                 $this->cloneResources($ch->resources, $newCourse->id, $newChapter->id);
             }
 
-            // Clone root resources (no chapter)
+            // Clone root resources — auto-create a chapter so students can access them
             $rootResources = $course->rootResources()->with('exercise')->get();
-            $this->cloneResources($rootResources, $newCourse->id, null);
+            if ($rootResources->isNotEmpty()) {
+                $nextOrder = $chapters->max('order') + 1;
+                $defaultChapter = $newCourse->chapters()->create([
+                    'title' => 'Cours',
+                    'order' => $nextOrder,
+                ]);
+                $this->cloneResources($rootResources, $newCourse->id, $defaultChapter->id);
+            }
 
             return $newCourse;
         });
@@ -205,6 +212,30 @@ class CourseController extends Controller
                 }
             }
         }
+    }
+
+    public function organizeRootResources(Request $request, Course $course)
+    {
+        $this->ensureTeacherOwnsCourse($request, $course);
+
+        $rootResources = $course->rootResources()->get();
+
+        if ($rootResources->isEmpty()) {
+            return response()->json(['message' => 'Aucune ressource sans chapitre.']);
+        }
+
+        $chapter = $course->chapters()->create([
+            'title' => 'Cours',
+            'order' => ($course->chapters()->max('order') ?? 0) + 1,
+        ]);
+
+        \App\Models\Resource::whereIn('id', $rootResources->pluck('id'))
+            ->update(['chapter_id' => $chapter->id]);
+
+        return response()->json([
+            'message' => 'Ressources organisées dans le chapitre "Cours".',
+            'course'  => $course->load(['chapters.resources', 'rootResources', 'section.schoolClass']),
+        ]);
     }
 
     public function destroyFromLibrary(Request $request, Course $course)

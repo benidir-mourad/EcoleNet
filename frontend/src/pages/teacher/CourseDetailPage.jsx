@@ -6,7 +6,7 @@ import {
   PlayCircle, FileUp, Users, BookOpen, Plus, Trash2, Zap,
   CheckSquare, GripVertical, ChevronDown, ChevronUp,
   Monitor, RefreshCw, ClipboardList, Award, CheckCircle, FileText,
-  BookMarked, Library,
+  BookMarked, Library, GraduationCap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -16,6 +16,7 @@ import ResourceViewer from '../../components/ResourceViewer';
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 
 const TYPE_LABELS = {
+  competences:         'Compétences',
   presentation:        'Présentation',
   syllabus:            'Syllabus',
   exercise:            'Exercice',
@@ -27,6 +28,7 @@ const TYPE_LABELS = {
 };
 
 const TYPE_ICON_MAP = {
+  competences:         BookMarked,
   presentation:        Monitor,
   syllabus:            BookOpen,
   exercise:            Pencil,
@@ -38,18 +40,19 @@ const TYPE_ICON_MAP = {
 };
 
 const TYPE_STYLE = {
-  presentation:        { bg: 'bg-blue-50',   text: 'text-blue-600',   border: 'border-blue-200'   },
-  syllabus:            { bg: 'bg-purple-50',  text: 'text-purple-600', border: 'border-purple-200' },
-  exercise:            { bg: 'bg-amber-50',   text: 'text-amber-600',  border: 'border-amber-200'  },
-  exercise_solution:   { bg: 'bg-green-50',   text: 'text-green-600',  border: 'border-green-200'  },
-  revision:            { bg: 'bg-cyan-50',    text: 'text-cyan-600',   border: 'border-cyan-200'   },
-  revision_solution:   { bg: 'bg-teal-50',    text: 'text-teal-600',   border: 'border-teal-200'   },
-  evaluation:          { bg: 'bg-red-50',     text: 'text-red-600',    border: 'border-red-200'    },
-  evaluation_solution: { bg: 'bg-rose-50',    text: 'text-rose-600',   border: 'border-rose-200'   },
+  competences:         { bg: 'bg-indigo-50',  text: 'text-indigo-600',  border: 'border-indigo-200'  },
+  presentation:        { bg: 'bg-blue-50',    text: 'text-blue-600',    border: 'border-blue-200'    },
+  syllabus:            { bg: 'bg-purple-50',  text: 'text-purple-600',  border: 'border-purple-200'  },
+  exercise:            { bg: 'bg-amber-50',   text: 'text-amber-600',   border: 'border-amber-200'   },
+  exercise_solution:   { bg: 'bg-green-50',   text: 'text-green-600',   border: 'border-green-200'   },
+  revision:            { bg: 'bg-cyan-50',    text: 'text-cyan-600',    border: 'border-cyan-200'    },
+  revision_solution:   { bg: 'bg-teal-50',    text: 'text-teal-600',    border: 'border-teal-200'    },
+  evaluation:          { bg: 'bg-red-50',     text: 'text-red-600',     border: 'border-red-200'     },
+  evaluation_solution: { bg: 'bg-rose-50',    text: 'text-rose-600',    border: 'border-rose-200'    },
 };
 
 const INTERACTIVE_TYPES = ['exercise', 'revision', 'evaluation'];
-const VIEWABLE_TYPES    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
+const VIEWABLE_TYPES    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx', 'html_embed'];
 const TRACKING_FILTERS = [
   { value: 'all', label: 'Tous' },
   { value: 'attention', label: 'A relancer' },
@@ -547,6 +550,30 @@ function AddResourceModal({ type, chapterId, courseId, onClose }) {
   );
 }
 
+/* ─── OrganizeButton ─────────────────────────────────────────────────────── */
+
+function OrganizeButton({ courseId }) {
+  const qc = useQueryClient();
+  const organize = useMutation({
+    mutationFn: () => api.post(`/teacher/courses/${courseId}/organize-chapters`),
+    onSuccess: (res) => {
+      qc.invalidateQueries(['teacher-course', courseId]);
+      toast.success(res.data.message);
+    },
+    onError: () => toast.error('Erreur lors de l\'organisation'),
+  });
+
+  return (
+    <button
+      onClick={() => organize.mutate()}
+      disabled={organize.isPending}
+      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-60 shrink-0"
+    >
+      {organize.isPending ? '…' : '+ Organiser en chapitres'}
+    </button>
+  );
+}
+
 /* ─── ChapterSection ─────────────────────────────────────────────────────── */
 
 function ChapterSection({ chapter, courseId, onPreview }) {
@@ -826,6 +853,10 @@ export default function CourseDetailPage() {
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium transition">
               <Plus size={16} /> Ajouter un chapitre
             </button>
+            <Link to={`/teacher/courses/${courseId}/preview`}
+              className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg hover:bg-emerald-100 text-sm font-medium transition">
+              <GraduationCap size={16} /> Aperçu élève
+            </Link>
             <Link to={`/teacher/courses/${courseId}/forum`}
               className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-100 text-sm font-medium transition">
               <MessageCircle size={16} /> Forum
@@ -861,9 +892,13 @@ export default function CourseDetailPage() {
 
         {/* Legacy root resources (no chapter) */}
         {rootRes.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
-              <span className="font-semibold text-gray-600 text-sm">Ressources sans chapitre</span>
+          <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden">
+            <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between gap-3">
+              <div>
+                <span className="font-semibold text-amber-800 text-sm">Ressources sans chapitre</span>
+                <p className="text-xs text-amber-600 mt-0.5">Ces ressources ne sont pas visibles par les élèves.</p>
+              </div>
+              <OrganizeButton courseId={courseId} />
             </div>
             <div className="p-5 grid gap-3">
               {Object.keys(TYPE_LABELS).map(type => {

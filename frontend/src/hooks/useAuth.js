@@ -16,9 +16,10 @@ export function useAuth() {
 
   const register = useCallback(async (formData) => {
     const { data } = await api.post('/register', formData);
-    navigate('/login');
+    setAuth(data.user, data.token);
+    navigate('/student/dashboard');
     return data;
-  }, [navigate]);
+  }, [setAuth, navigate]);
 
   const logout = useCallback(async () => {
     try { await api.post('/logout'); } catch {

@@ -38,7 +38,7 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Identifiants incorrects'));
+      toast.error(getApiErrorMessage(err, 'Email ou mot de passe incorrect.'));
     } finally {
       setLoading(false);
     }
@@ -133,7 +133,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-white/60 mb-1.5">Mot de passe</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-white/60">Mot de passe</label>
+                <Link to="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 transition">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
               <input
                 {...register('password')}
                 type="password"

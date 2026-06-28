@@ -10,6 +10,7 @@ class Resource extends Model
     use HasFactory;
 
     const TYPES = [
+        'competences',
         'presentation',
         'syllabus',
         'exercise',
@@ -30,6 +31,8 @@ class Resource extends Model
         'file_name',
         'file_size',
         'external_url',
+        'source_path',
+        'source_hash',
         'is_visible',
         'order',
     ];

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { storageUrl } from '../../config';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -196,6 +196,13 @@ export default function TeacherLayout({ children }) {
   const { pathname } = useLocation();
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const { data: pendingData } = useQuery({
+    queryKey: ['pending-enrollments-count'],
+    queryFn: () => api.get('/teacher/enrollments/pending').then(r => r.data),
+    refetchInterval: 30000,
+  });
+  const pendingCount = pendingData?.enrollments?.length || 0;
+
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
   const avatarUrl = user?.avatar ? storageUrl(user.avatar) : null;
 
@@ -254,7 +261,13 @@ export default function TeacherLayout({ children }) {
                   : 'text-indigo-200 hover:bg-indigo-700/60'
               )}
             >
-              <Icon size={18} /> {label}
+              <Icon size={18} />
+              <span className="flex-1">{label}</span>
+              {to === '/teacher/enrollments' && pendingCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-xs font-bold text-white">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           ))}
           <NotificationsMenu color="indigo" />

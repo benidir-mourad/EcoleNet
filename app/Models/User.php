@@ -102,4 +102,11 @@ class User extends Authenticatable
     {
         return $this->first_name . ' ' . $this->last_name;
     }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
+        $url = $frontendUrl . '/reset-password?token=' . $token . '&email=' . urlencode($this->email);
+        $this->notify(new \App\Notifications\ResetPasswordNotification($url));
+    }
 }

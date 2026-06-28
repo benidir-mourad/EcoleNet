@@ -29,8 +29,12 @@ class AuthController extends Controller
             'status'     => 'pending',
         ]);
 
+        // Auto-login: return a token so the student can immediately choose their class
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
-            'user'  => $this->userResource($user),
+            'user'    => $this->userResource($user),
+            'token'   => $token,
             'message' => 'Registration received. Your account is pending validation.',
         ], 201);
     }
@@ -44,12 +48,16 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user || !Hash::check($data['password'], $user->password)) {
-            return response()->json(['message' => 'Invalid credentials.'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Aucun compte trouvé avec cet email.'], 401);
         }
 
-        if ($user->status !== 'active') {
-            return response()->json(['message' => 'Account is pending validation.'], 403);
+        if (!Hash::check($data['password'], $user->password)) {
+            return response()->json(['message' => 'Mot de passe incorrect.'], 401);
+        }
+
+        if ($user->status === 'rejected') {
+            return response()->json(['message' => 'Votre compte a été refusé. Veuillez contacter un administrateur.'], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

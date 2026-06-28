@@ -67,6 +67,21 @@ function VideoViewer({ url, isYoutube }) {
   );
 }
 
+/* ── HTML embed viewer ──────────────────────────────────────────────────── */
+function HtmlEmbedViewer({ url, title }) {
+  return (
+    <div className="flex-1 bg-white flex flex-col">
+      <iframe
+        src={url}
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        className="flex-1 w-full border-0"
+        title={title}
+        style={{ minHeight: '70vh' }}
+      />
+    </div>
+  );
+}
+
 /* ── Office files ───────────────────────────────────────────────────────── */
 const OFFICE_LABELS = { pptx: 'PowerPoint', docx: 'Word', xlsx: 'Excel' };
 const OFFICE_ICONS  = { pptx: '🟠', docx: '🔵', xlsx: '🟢' };
@@ -170,6 +185,7 @@ export default function ResourceViewer({ resource, onClose }) {
         </a>
       </div>
     );
+    if (ft === 'html_embed' || ft === 'html_interactive') return <HtmlEmbedViewer url={url} title={resource.title} />;
     if (ft === 'pptx') return <PptxViewer url={url} fileName={resource.file_name || resource.title} />;
     if (['docx', 'xlsx'].includes(ft)) {
       return <OfficeViewer url={url} fileType={ft} fileName={resource.file_name || resource.title} />;

@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  Library, ChevronDown, ChevronUp, BookMarked, Trash2,
+  Library, ChevronDown, ChevronRight, BookMarked, Trash2,
   Send, FileText, CheckSquare, GripVertical, Upload,
   Monitor, RefreshCw, ClipboardList, Award, CheckCircle,
-  BookOpen, Pencil, Plus,
+  BookOpen, Pencil, Plus, FolderOpen, Folder,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
 
 const TYPE_LABELS = {
+  competences:         'Compétences',
   presentation:        'Présentation',
   syllabus:            'Syllabus',
   exercise:            'Exercice',
@@ -23,7 +24,7 @@ const TYPE_LABELS = {
 };
 
 const TYPE_ICONS = {
-  presentation: Monitor, syllabus: BookOpen, exercise: Pencil,
+  competences: BookMarked, presentation: Monitor, syllabus: BookOpen, exercise: Pencil,
   exercise_solution: CheckCircle, revision: RefreshCw,
   revision_solution: CheckCircle, evaluation: ClipboardList,
   evaluation_solution: Award,
@@ -34,6 +35,34 @@ const FILE_TYPE_ICONS = {
   fill_blanks: FileText, ordering: CheckSquare, code_editor: Monitor,
   truth_table: CheckCircle,
 };
+
+// ── Parse "[4TTR | M1-HTML] Chap01 - Le web..." ──────────────────────────────
+
+function parseName(name) {
+  const match = name.match(/^\[([^|]+)\s*\|\s*([^\]]+)\]\s*(.+)$/);
+  if (match) {
+    return { classCode: match[1].trim(), moduleCode: match[2].trim(), chapName: match[3].trim() };
+  }
+  return { classCode: 'Autres', moduleCode: '', chapName: name };
+}
+
+function groupCourses(courses) {
+  const grouped = {};
+  courses.forEach(course => {
+    const { classCode, moduleCode } = parseName(course.name);
+    if (!grouped[classCode]) grouped[classCode] = {};
+    const mod = moduleCode || '__other__';
+    if (!grouped[classCode][mod]) grouped[classCode][mod] = [];
+    grouped[classCode][mod].push(course);
+  });
+  // Sort chapters within each module by chapName
+  Object.values(grouped).forEach(modules => {
+    Object.values(modules).forEach(list => {
+      list.sort((a, b) => parseName(a.name).chapName.localeCompare(parseName(b.name).chapName));
+    });
+  });
+  return grouped;
+}
 
 /* ── AssignModal ─────────────────────────────────────────────────────────── */
 
@@ -49,7 +78,7 @@ function AssignModal({ course, onClose }) {
     mutationFn: () => api.post(`/teacher/library/${course.id}/assign`, { section_id: selectedSection }),
     onSuccess: (res) => {
       const c = res.data.course;
-      toast.success(`« ${course.name} » attribué à ${c.section?.name || 'la section'} !`);
+      toast.success(`« ${parseName(course.name).chapName} » attribué à ${c.section?.name || 'la section'} !`);
       onClose();
     },
     onError: () => toast.error("Erreur lors de l'attribution"),
@@ -65,7 +94,7 @@ function AssignModal({ course, onClose }) {
           <h3 className="font-semibold text-gray-800">Attribuer à une classe</h3>
         </div>
         <p className="text-sm text-gray-500 mb-5">
-          Choisissez la section où dupliquer « <strong>{course.name}</strong> ».
+          Choisissez la section où dupliquer « <strong>{parseName(course.name).chapName}</strong> ».
           Le cours original restera dans votre bibliothèque.
         </p>
 
@@ -115,102 +144,7 @@ function AssignModal({ course, onClose }) {
   );
 }
 
-/* ── CourseCard ──────────────────────────────────────────────────────────── */
-
-function CourseCard({ course }) {
-  const qc = useQueryClient();
-  const [open, setOpen]           = useState(false);
-  const [showAssign, setShowAssign] = useState(false);
-  const [confirmDel, setConfirmDel] = useState(false);
-
-  const deleteFromLibrary = useMutation({
-    mutationFn: () => api.delete(`/teacher/library/${course.id}`),
-    onSuccess: () => { qc.invalidateQueries(['teacher-library']); toast.success('Cours supprimé de la bibliothèque'); },
-    onError: () => toast.error('Erreur lors de la suppression'),
-  });
-
-  const totalResources = [
-    ...(course.chapters || []).flatMap(ch => ch.resources || []),
-    ...(course.root_resources || []),
-  ].length;
-
-  const totalChapters = (course.chapters || []).length;
-
-  return (
-    <>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-indigo-50 to-white">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
-            <Library size={18} className="text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-800 truncate">{course.name}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {totalChapters} chapitre{totalChapters !== 1 ? 's' : ''} · {totalResources} ressource{totalResources !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => setShowAssign(true)}
-              className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs hover:bg-indigo-700 transition font-medium">
-              <Send size={13} /> Attribuer
-            </button>
-            {confirmDel ? (
-              <div className="flex items-center gap-1">
-                <button onClick={() => deleteFromLibrary.mutate()} disabled={deleteFromLibrary.isPending}
-                  className="px-2 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600">
-                  Supprimer
-                </button>
-                <button onClick={() => setConfirmDel(false)} className="px-2 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">
-                  Non
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => setConfirmDel(true)} title="Supprimer de la bibliothèque"
-                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition">
-                <Trash2 size={16} />
-              </button>
-            )}
-            <button onClick={() => setOpen(o => !o)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition">
-              {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Chapters tree */}
-        {open && (
-          <div className="px-5 pb-5 pt-3 space-y-3">
-            {(course.chapters || []).length === 0 && (course.root_resources || []).length === 0 && (
-              <p className="text-sm text-gray-400 italic">Cours vide</p>
-            )}
-            {(course.chapters || []).map(ch => (
-              <div key={ch.id} className="rounded-xl border border-indigo-100 overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50">
-                  <BookMarked size={13} className="text-indigo-500 shrink-0" />
-                  <span className="text-sm font-semibold text-indigo-800">{ch.title}</span>
-                  <span className="text-xs text-indigo-400 ml-auto">{(ch.resources || []).length} ressource{(ch.resources || []).length !== 1 ? 's' : ''}</span>
-                </div>
-                {(ch.resources || []).length > 0 && (
-                  <div className="px-4 py-2 space-y-1.5">
-                    {(ch.resources || []).map(r => <ResourceLine key={r.id} resource={r} />)}
-                  </div>
-                )}
-              </div>
-            ))}
-            {(course.root_resources || []).length > 0 && (
-              <div className="rounded-xl border border-gray-100 px-4 py-3 space-y-1.5">
-                <p className="text-xs text-gray-400 mb-2">Ressources sans chapitre</p>
-                {(course.root_resources || []).map(r => <ResourceLine key={r.id} resource={r} />)}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {showAssign && <AssignModal course={course} onClose={() => setShowAssign(false)} />}
-    </>
-  );
-}
+/* ── ResourceLine ────────────────────────────────────────────────────────── */
 
 function ResourceLine({ resource }) {
   const Icon = FILE_TYPE_ICONS[resource.file_type] || TYPE_ICONS[resource.type] || FileText;
@@ -228,6 +162,165 @@ function ResourceLine({ resource }) {
   );
 }
 
+/* ── ChapterRow ──────────────────────────────────────────────────────────── */
+
+function ChapterRow({ course }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  const deleteFromLibrary = useMutation({
+    mutationFn: () => api.delete(`/teacher/library/${course.id}`),
+    onSuccess: () => { qc.invalidateQueries(['teacher-library']); toast.success('Cours supprimé de la bibliothèque'); },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
+  const { chapName } = parseName(course.name);
+  const totalResources = [
+    ...(course.chapters || []).flatMap(ch => ch.resources || []),
+    ...(course.root_resources || []),
+  ].length;
+
+  return (
+    <>
+      <div className="border-b border-gray-100 last:border-0">
+        <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition">
+          <button onClick={() => setOpen(o => !o)} className="text-gray-300 hover:text-gray-500 transition shrink-0">
+            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+          <span className="flex-1 text-sm text-gray-800 font-medium truncate">{chapName}</span>
+          <span className="text-xs text-gray-400 shrink-0 mr-2">
+            {totalResources} ressource{totalResources !== 1 ? 's' : ''}
+          </span>
+          <button onClick={() => setShowAssign(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-indigo-700 font-medium shrink-0 transition">
+            <Send size={12} /> Attribuer
+          </button>
+          {confirmDel ? (
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => deleteFromLibrary.mutate()} disabled={deleteFromLibrary.isPending}
+                className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
+                Oui
+              </button>
+              <button onClick={() => setConfirmDel(false)} className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50">
+                Non
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmDel(true)} title="Supprimer de la bibliothèque"
+              className="p-1.5 text-gray-200 hover:text-red-400 hover:bg-red-50 rounded transition shrink-0">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+
+        {open && (
+          <div className="pl-10 pr-4 pb-3 pt-1 space-y-2">
+            {(course.chapters || []).length === 0 && (course.root_resources || []).length === 0 && (
+              <p className="text-xs text-gray-400 italic">Cours vide</p>
+            )}
+            {(course.chapters || []).map(ch => (
+              <div key={ch.id} className="rounded-lg border border-indigo-50 overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50">
+                  <BookMarked size={11} className="text-indigo-400 shrink-0" />
+                  <span className="text-xs font-semibold text-indigo-800">{ch.title}</span>
+                  <span className="text-xs text-indigo-400 ml-auto">
+                    {(ch.resources || []).length} ressource{(ch.resources || []).length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {(ch.resources || []).length > 0 && (
+                  <div className="px-3 py-2 space-y-1">
+                    {(ch.resources || []).map(r => <ResourceLine key={r.id} resource={r} />)}
+                  </div>
+                )}
+              </div>
+            ))}
+            {(course.root_resources || []).length > 0 && (
+              <div className="space-y-1.5 pl-1">
+                {(course.root_resources || []).map(r => <ResourceLine key={r.id} resource={r} />)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showAssign && <AssignModal course={course} onClose={() => setShowAssign(false)} />}
+    </>
+  );
+}
+
+/* ── ModuleGroup ─────────────────────────────────────────────────────────── */
+
+function ModuleGroup({ moduleCode, courses }) {
+  const [open, setOpen] = useState(false);
+  const displayCode = moduleCode === '__other__' ? 'Divers' : moduleCode;
+
+  return (
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 text-left transition"
+      >
+        {open
+          ? <FolderOpen size={16} className="text-amber-500 shrink-0" />
+          : <Folder size={16} className="text-amber-400 shrink-0" />
+        }
+        <span className="flex-1 text-sm font-semibold text-gray-700">{displayCode}</span>
+        <span className="text-xs text-gray-400 mr-2">
+          {courses.length} chapitre{courses.length !== 1 ? 's' : ''}
+        </span>
+        {open ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="bg-white divide-y divide-gray-50">
+          {courses.map(course => <ChapterRow key={course.id} course={course} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── ClassGroup ──────────────────────────────────────────────────────────── */
+
+function ClassGroup({ classCode, modules }) {
+  const [open, setOpen] = useState(true);
+
+  const totalChapters = Object.values(modules).reduce((sum, cs) => sum + cs.length, 0);
+  const moduleCount = Object.keys(modules).length;
+
+  const sortedModules = Object.entries(modules).sort(([a], [b]) =>
+    a.localeCompare(b, undefined, { numeric: true })
+  );
+
+  return (
+    <div className="rounded-2xl border border-indigo-200 overflow-hidden shadow-sm">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-left transition"
+      >
+        <Library size={20} className="shrink-0" />
+        <div className="flex-1">
+          <span className="font-bold text-base">{classCode}</span>
+          <span className="text-indigo-200 text-sm ml-3">
+            {moduleCount} module{moduleCount !== 1 ? 's' : ''} · {totalChapters} chapitre{totalChapters !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+      </button>
+
+      {open && (
+        <div className="p-4 space-y-3 bg-white">
+          {sortedModules.map(([moduleCode, courses]) => (
+            <ModuleGroup key={moduleCode} moduleCode={moduleCode} courses={courses} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── LibraryPage ─────────────────────────────────────────────────────────── */
 
 export default function LibraryPage() {
@@ -237,6 +330,8 @@ export default function LibraryPage() {
   });
 
   const courses = data?.courses || [];
+  const grouped = groupCourses(courses);
+  const sortedClasses = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <TeacherLayout>
@@ -274,9 +369,9 @@ export default function LibraryPage() {
         </div>
       )}
 
-      <div className="grid gap-4">
-        {courses.map(course => (
-          <CourseCard key={course.id} course={course} />
+      <div className="space-y-5">
+        {sortedClasses.map(([classCode, modules]) => (
+          <ClassGroup key={classCode} classCode={classCode} modules={modules} />
         ))}
       </div>
     </TeacherLayout>

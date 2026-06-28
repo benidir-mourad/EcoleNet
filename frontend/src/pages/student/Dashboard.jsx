@@ -203,12 +203,32 @@ export default function StudentDashboard() {
   if (pending) {
     return (
       <StudentLayout>
-        <div className="mx-auto mt-12 max-w-md rounded-lg bg-white p-8 text-center shadow-sm">
-          <Clock size={48} className="mx-auto mb-4 text-amber-400" />
-          <h2 className="mb-2 text-xl font-bold text-gray-800">Inscription en attente</h2>
-          <p className="text-gray-500">
-            Ta demande pour <strong>{pending.school_class?.name}</strong> est en cours de validation par le professeur.
-          </p>
+        <div className="mx-auto mt-12 max-w-lg">
+          <div className="rounded-2xl bg-white p-8 text-center shadow-sm border border-amber-100">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 border-2 border-amber-200">
+              <Clock size={32} className="text-amber-500" />
+            </div>
+            <h2 className="mb-2 text-xl font-bold text-gray-800">Demande envoyée !</h2>
+            <p className="text-gray-600 mb-6">
+              Ton inscription à <strong className="text-gray-800">{pending.school_class?.name}</strong> a bien été soumise.
+              Le professeur va valider ta demande prochainement.
+            </p>
+            <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-left space-y-3">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Prochaines étapes</p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-200 text-xs font-bold text-amber-800">1</span>
+                <p className="text-sm text-gray-600">Le professeur reçoit ta demande et la valide</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-500">2</span>
+                <p className="text-sm text-gray-400">Tu reçois une notification de confirmation</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-500">3</span>
+                <p className="text-sm text-gray-400">Tu accèdes aux cours et aux ressources de ta classe</p>
+              </div>
+            </div>
+          </div>
         </div>
       </StudentLayout>
     );
@@ -217,26 +237,39 @@ export default function StudentDashboard() {
   if (!enrollment) {
     return (
       <StudentLayout>
-        <div className="mx-auto mt-12 max-w-md rounded-lg bg-white p-8 shadow-sm">
-          <h2 className="mb-2 text-xl font-bold text-gray-800">Rejoindre une classe</h2>
-          <p className="mb-6 text-gray-500">Sélectionne ta classe pour accéder aux cours.</p>
-          <select
-            value={selectedClass}
-            onChange={e => setSelectedClass(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">Choisir une classe</option>
-            {classesData?.classes?.map(cls => (
-              <option key={cls.id} value={cls.id}>{cls.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => enroll.mutate()}
-            disabled={!selectedClass || enroll.isPending}
-            className="w-full rounded-lg bg-emerald-600 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-          >
-            {enroll.isPending ? 'Envoi...' : "Demander l'inscription"}
-          </button>
+        <div className="mx-auto mt-12 max-w-lg">
+          <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-100">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 border-2 border-emerald-200">
+              <GraduationCap size={32} className="text-emerald-600" />
+            </div>
+            <h2 className="mb-1 text-xl font-bold text-gray-800 text-center">Bienvenue sur EcoleNet !</h2>
+            <p className="mb-6 text-gray-500 text-center text-sm">
+              Pour accéder aux cours, commence par t'inscrire dans ta classe.
+            </p>
+            <div className="rounded-xl bg-gray-50 p-4 mb-6 space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Comment ça marche</p>
+              <p className="text-sm text-gray-600">1. Choisis ta classe dans la liste ci-dessous</p>
+              <p className="text-sm text-gray-600">2. Le professeur valide ta demande</p>
+              <p className="text-sm text-gray-600">3. Tu accèdes à tes cours immédiatement</p>
+            </div>
+            <select
+              value={selectedClass}
+              onChange={e => setSelectedClass(e.target.value)}
+              className="mb-4 w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            >
+              <option value="">— Sélectionner une classe —</option>
+              {classesData?.classes?.map(cls => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => enroll.mutate()}
+              disabled={!selectedClass || enroll.isPending}
+              className="w-full rounded-lg bg-emerald-600 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition"
+            >
+              {enroll.isPending ? 'Envoi en cours…' : "Demander l'inscription"}
+            </button>
+          </div>
         </div>
       </StudentLayout>
     );

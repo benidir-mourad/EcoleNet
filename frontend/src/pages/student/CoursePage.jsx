@@ -12,6 +12,7 @@ import StudentLayout from '../../components/layout/StudentLayout';
 import ResourceViewer from '../../components/ResourceViewer';
 
 const TYPE_LABELS = {
+  competences:         'Compétences',
   presentation:        'Présentation',
   syllabus:            'Syllabus',
   exercise:            'Exercice',
@@ -23,6 +24,7 @@ const TYPE_LABELS = {
 };
 
 const TYPE_ICON_MAP = {
+  competences:         BookMarked,
   presentation:        Monitor,
   syllabus:            BookOpen,
   exercise:            Pencil,
@@ -34,7 +36,8 @@ const TYPE_ICON_MAP = {
 };
 
 const TYPE_STYLE = {
-  presentation:        { bg: 'bg-blue-50',   text: 'text-blue-600'   },
+  competences:         { bg: 'bg-indigo-50',  text: 'text-indigo-600' },
+  presentation:        { bg: 'bg-blue-50',    text: 'text-blue-600'   },
   syllabus:            { bg: 'bg-purple-50',  text: 'text-purple-600' },
   exercise:            { bg: 'bg-amber-50',   text: 'text-amber-600'  },
   exercise_solution:   { bg: 'bg-green-50',   text: 'text-green-600'  },
@@ -49,10 +52,10 @@ const FILE_ICONS = {
   video_upload: Video, video_youtube: Video, link: LinkIcon,
   qcm: CheckSquare, drag_drop: GripVertical, excel_interactive: CheckSquare, file_upload: Upload,
   fill_blanks: FileText, ordering: CheckSquare, code_editor: Monitor, truth_table: CheckCircle,
-  web_lesson: BookOpen,
+  web_lesson: BookOpen, html_embed: Monitor, html_interactive: Monitor,
 };
 
-const VIEWABLE    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx'];
+const VIEWABLE    = ['pdf', 'image', 'video_upload', 'video_youtube', 'link', 'pptx', 'docx', 'xlsx', 'html_embed', 'html_interactive'];
 const INTERACTIVE = ['qcm', 'drag_drop', 'file_upload', 'fill_blanks', 'ordering', 'code_editor', 'truth_table', 'web_lesson'];
 
 const STATUS_LABELS = {
@@ -256,7 +259,7 @@ export default function CoursePage() {
   const { courseId } = useParams();
   const [viewingResource, setViewingResource] = useState(null);
 
-  const { data } = useQuery({
+  const { data, isError, error } = useQuery({
     queryKey: ['student-course', courseId],
     queryFn: () => api.get(`/student/courses/${courseId}`).then(r => r.data),
   });
@@ -287,7 +290,17 @@ export default function CoursePage() {
 
       {/* Chapters */}
       <div className="grid gap-5">
-        {chapters.map(ch => (
+        {isError && (
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center text-gray-400 border border-dashed border-gray-200">
+            <BookMarked size={40} className="mx-auto mb-3 opacity-20" />
+            {error?.response?.status === 403
+              ? <p>Votre inscription à cette classe n'est pas encore validée par le professeur.</p>
+              : <p>Impossible de charger ce cours.</p>
+            }
+          </div>
+        )}
+
+        {!isError && chapters.map(ch => (
           <ChapterCard
             key={ch.id}
             chapter={ch}
@@ -296,7 +309,7 @@ export default function CoursePage() {
           />
         ))}
 
-        {chapters.length === 0 && (
+        {!isError && chapters.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center text-gray-400 border border-dashed border-gray-200">
             <BookMarked size={40} className="mx-auto mb-3 opacity-20" />
             <p>Aucun chapitre disponible pour ce cours.</p>

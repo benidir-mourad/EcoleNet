@@ -42,7 +42,6 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await registerUser(data);
-      toast.success('Inscription réussie ! En attente de validation.');
     } catch (err) {
       toast.error(getApiErrorMessage(err, "Erreur lors de l'inscription"));
     } finally {

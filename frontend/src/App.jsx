@@ -7,6 +7,8 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
 
 const TeacherDashboard = lazy(() => import('./pages/teacher/Dashboard'));
 const ClassesPage = lazy(() => import('./pages/teacher/ClassesPage'));
@@ -26,6 +28,7 @@ const OrderingBuilderPage = lazy(() => import('./pages/teacher/OrderingBuilderPa
 const CodeEditorBuilderPage = lazy(() => import('./pages/teacher/CodeEditorBuilderPage'));
 const TruthTableBuilderPage = lazy(() => import('./pages/teacher/TruthTableBuilderPage'));
 const WebLessonBuilderPage = lazy(() => import('./pages/teacher/WebLessonBuilderPage'));
+const CoursePreviewPage = lazy(() => import('./pages/teacher/CoursePreviewPage'));
 
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
 const CoursePage = lazy(() => import('./pages/student/CoursePage'));
@@ -73,15 +76,18 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Public */}
-          <Route path="/login"    element={<Page><LoginPage /></Page>} />
-          <Route path="/register" element={<Page><RegisterPage /></Page>} />
-          <Route path="/"         element={<Navigate to="/login" replace />} />
+          <Route path="/login"            element={<Page><LoginPage /></Page>} />
+          <Route path="/register"         element={<Page><RegisterPage /></Page>} />
+          <Route path="/forgot-password"  element={<Page><ForgotPasswordPage /></Page>} />
+          <Route path="/reset-password"   element={<Page><ResetPasswordPage /></Page>} />
+          <Route path="/"                 element={<Navigate to="/login" replace />} />
 
           {/* Teacher */}
           <Route path="/teacher/dashboard"                        element={T(<TeacherDashboard />)} />
           <Route path="/teacher/classes"                          element={T(<ClassesPage />)} />
           <Route path="/teacher/classes/:classId"                 element={T(<ClassDetailPage />)} />
           <Route path="/teacher/courses/:courseId"                element={T(<CourseDetailPage />)} />
+          <Route path="/teacher/courses/:courseId/preview"        element={T(<CoursePreviewPage />)} />
           <Route path="/teacher/courses/:courseId/forum"          element={T(<TeacherForumPage />)} />
           <Route path="/teacher/enrollments"                      element={T(<EnrollmentsPage />)} />
           <Route path="/teacher/messages"                         element={T(<TeacherMessagesPage />)} />

@@ -49,7 +49,7 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('user.email', 'teacher@example.com');
     }
 
-    public function test_invalid_credentials_are_rejected(): void
+    public function test_wrong_password_is_rejected(): void
     {
         $teacher = $this->user('teacher', 'active', ['email' => 'teacher@example.com']);
 
@@ -58,7 +58,17 @@ class AuthApiTest extends TestCase
             'password' => 'wrong-password',
         ])
             ->assertUnauthorized()
-            ->assertJsonPath('message', 'Invalid credentials.');
+            ->assertJsonPath('message', 'Mot de passe incorrect.');
+    }
+
+    public function test_unknown_email_is_rejected(): void
+    {
+        $this->postJson('/api/login', [
+            'email' => 'inconnu@example.com',
+            'password' => 'password',
+        ])
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Aucun compte trouvé avec cet email.');
     }
 
     public function test_user_can_update_profile(): void

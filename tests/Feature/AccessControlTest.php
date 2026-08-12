@@ -26,14 +26,19 @@ class AccessControlTest extends TestCase
             ->assertJson(['message' => 'Account is pending validation.']);
     }
 
-    public function test_pending_user_cannot_login(): void
+    public function test_pending_user_can_login_but_stays_blocked_from_student_routes(): void
     {
         $student = $this->user('student', 'pending', ['email' => 'pending@example.com']);
 
-        $this->postJson('/api/login', [
+        $token = $this->postJson('/api/login', [
             'email' => $student->email,
             'password' => 'password',
         ])
+            ->assertOk()
+            ->json('token');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/student/dashboard')
             ->assertForbidden()
             ->assertJson(['message' => 'Account is pending validation.']);
     }

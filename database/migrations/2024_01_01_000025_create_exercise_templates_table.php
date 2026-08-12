@@ -12,9 +12,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('teacher_id')->constrained('users')->cascadeOnDelete();
             $table->string('title');
-            $table->string('type')->default('code_editor');
-            $table->string('language')->nullable();
-            $table->string('level')->default('beginner');
+            $table->string('type', 50)->default('code_editor');
+            $table->string('language', 50)->nullable();
+            $table->string('level', 50)->default('beginner');
             $table->string('summary')->nullable();
             $table->text('instructions')->nullable();
             $table->json('content')->nullable();

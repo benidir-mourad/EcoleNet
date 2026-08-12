@@ -62,6 +62,7 @@ class UserController extends Controller
         ]);
 
         $user->update($data);
+        $this->revokeTokensIfDeactivated($user);
 
         return response()->json(['user' => $user->fresh()]);
     }
@@ -79,7 +80,19 @@ class UserController extends Controller
         ]);
 
         $user->update($data);
+        $this->revokeTokensIfDeactivated($user);
 
         return response()->json(['user' => $user->fresh()]);
+    }
+
+    /**
+     * Un compte désactivé ne doit pas survivre dans les sessions déjà ouvertes :
+     * le garde du login ne bloque que les nouvelles connexions.
+     */
+    private function revokeTokensIfDeactivated(User $user): void
+    {
+        if ($user->status === 'inactive') {
+            $user->tokens()->delete();
+        }
     }
 }

@@ -45,6 +45,61 @@ class AdminUserApiTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $createdId]);
     }
 
+    public function test_deactivating_a_user_revokes_their_open_sessions(): void
+    {
+        // Authentification par token des deux côtés : actingAs() persisterait sur
+        // toute la méthode et masquerait le header Bearer du dernier appel.
+        $adminToken = $this->user('admin')->createToken('auth_token')->plainTextToken;
+        $student = $this->user('student', 'active');
+        $studentToken = $student->createToken('auth_token')->plainTextToken;
+
+        $this->asToken($studentToken)->getJson('/api/me')->assertOk();
+
+        $this->asToken($adminToken)
+            ->patchJson("/api/admin/users/{$student->id}/status", ['status' => 'inactive'])
+            ->assertOk();
+
+        $this->asToken($studentToken)->getJson('/api/me')->assertUnauthorized();
+    }
+
+    public function test_deactivating_a_user_through_the_update_endpoint_also_revokes_sessions(): void
+    {
+        $adminToken = $this->user('admin')->createToken('auth_token')->plainTextToken;
+        $student = $this->user('student', 'active');
+        $studentToken = $student->createToken('auth_token')->plainTextToken;
+
+        $this->asToken($adminToken)
+            ->putJson("/api/admin/users/{$student->id}", ['status' => 'inactive'])
+            ->assertOk();
+
+        $this->asToken($studentToken)->getJson('/api/me')->assertUnauthorized();
+    }
+
+    public function test_reactivating_a_user_leaves_their_sessions_untouched(): void
+    {
+        $adminToken = $this->user('admin')->createToken('auth_token')->plainTextToken;
+        $student = $this->user('student', 'pending');
+        $studentToken = $student->createToken('auth_token')->plainTextToken;
+
+        $this->asToken($adminToken)
+            ->patchJson("/api/admin/users/{$student->id}/status", ['status' => 'active'])
+            ->assertOk();
+
+        $this->asToken($studentToken)->getJson('/api/me')->assertOk();
+    }
+
+    /**
+     * Le guard sanctum mémorise l'utilisateur résolu pour toute la durée du test :
+     * sans ce reset, la requête suivante réutilise l'authentification de la précédente
+     * au lieu de rejouer le token passé en en-tête.
+     */
+    private function asToken(string $token): static
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this->withHeader('Authorization', "Bearer {$token}");
+    }
+
     public function test_non_admin_cannot_manage_users(): void
     {
         $teacher = $this->user('teacher');

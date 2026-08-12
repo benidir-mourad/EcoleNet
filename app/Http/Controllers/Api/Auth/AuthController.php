@@ -56,8 +56,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'Mot de passe incorrect.'], 401);
         }
 
-        if ($user->status === 'rejected') {
-            return response()->json(['message' => 'Votre compte a été refusé. Veuillez contacter un administrateur.'], 403);
+        // 'pending' peut se connecter : le tableau de bord affiche l'état d'attente de validation.
+        if ($user->status === 'inactive') {
+            return response()->json(['message' => 'Votre compte a été désactivé. Veuillez contacter un administrateur.'], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

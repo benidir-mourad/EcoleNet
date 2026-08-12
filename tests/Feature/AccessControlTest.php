@@ -43,6 +43,19 @@ class AccessControlTest extends TestCase
             ->assertJson(['message' => 'Account is pending validation.']);
     }
 
+    public function test_deactivated_user_cannot_login(): void
+    {
+        $student = $this->user('student', 'inactive', ['email' => 'inactive@example.com']);
+
+        $this->postJson('/api/login', [
+            'email' => $student->email,
+            'password' => 'password',
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Votre compte a été désactivé. Veuillez contacter un administrateur.')
+            ->assertJsonMissingPath('token');
+    }
+
     public function test_student_cannot_read_course_from_another_class(): void
     {
         $student = $this->user('student');

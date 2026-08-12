@@ -20,8 +20,10 @@ class AccessControlTest extends TestCase
     {
         $student = $this->user('student', 'pending');
 
+        // /student/dashboard, /student/classes et /student/enroll sont volontairement
+        // ouverts aux comptes en attente : voir StudentRegistrationFlowTest.
         $this->actingAs($student, 'sanctum')
-            ->getJson('/api/student/dashboard')
+            ->getJson('/api/student/courses')
             ->assertForbidden()
             ->assertJson(['message' => 'Account is pending validation.']);
     }
@@ -38,7 +40,7 @@ class AccessControlTest extends TestCase
             ->json('token');
 
         $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/student/dashboard')
+            ->getJson('/api/student/courses')
             ->assertForbidden()
             ->assertJson(['message' => 'Account is pending validation.']);
     }

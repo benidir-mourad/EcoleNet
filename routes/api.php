@@ -143,12 +143,16 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── Student routes ────────────────────────────────────────────────────────
-    Route::middleware('role:student')->prefix('student')->group(function () {
 
-        // Dashboard & enrollment
+    // Ouvertes aux comptes en attente : c'est le seul chemin pour demander son
+    // inscription à une classe, et cette demande approuvée est ce qui active le compte.
+    Route::middleware('role:student,allow-pending')->prefix('student')->group(function () {
         Route::get('dashboard',   [StudentDashboardController::class, 'index']);
         Route::get('classes',     [StudentCourseController::class, 'availableClasses']);
         Route::post('enroll',     [StudentDashboardController::class, 'enroll']);
+    });
+
+    Route::middleware('role:student')->prefix('student')->group(function () {
 
         // Courses & resources
         Route::get('courses',             [StudentCourseController::class, 'index']);

@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Course;
 use App\Models\Resource;
+use App\Models\SchoolClass;
+use App\Models\Section;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
@@ -14,38 +16,78 @@ class CoursesSyncCommand extends Command
     protected $signature = 'courses:sync
         {--source=C:\\Users\\Benid\\OneDrive\\IPET\\2026-2027\\01_Cours : Dossier source OneDrive}
         {--teacher=teacher@ecolenet.be : Email du professeur propriétaire}
+        {--class= : Ne traiter qu\'un dossier de classe (ex. 2eme)}
+        {--structure-only : Créer classes, sections et cours sans importer les fichiers}
         {--dry-run : Simulation sans écriture}';
 
     protected $description = 'Importe et synchronise les cours OneDrive → Bibliothèque EcoleNet (incrémental par hash MD5)';
 
-    private const CLASS_NAMES = [
-        '4TTR_INFO' => '4TTR',
-        '5TTR_INFO' => '5TTR',
-        '6TTR_INFO' => '6TTR',
+    /**
+     * Un profil par dossier de classe. 'library' dépose les cours dans la bibliothèque
+     * sous le nom `[code | module] chapitre`, à assigner ensuite à la main. 'class'
+     * crée la classe et ses sections, et y rattache directement les cours.
+     */
+    private const PROFILES = [
+        '4TTR_INFO' => ['code' => '4TTR', 'layout' => 'ttr',   'mode' => 'library'],
+        '5TTR_INFO' => ['code' => '5TTR', 'layout' => 'ttr',   'mode' => 'library'],
+        '6TTR_INFO' => ['code' => '6TTR', 'layout' => 'ttr',   'mode' => 'library'],
+        '2eme'      => ['code' => '2e',   'layout' => 'socle', 'mode' => 'class',
+                        'class_name' => '2e année', 'year' => '2026-2027'],
     ];
 
-    // subfolder name → [resource type, files to import: pdf|pptx|html|xlsx]
-    private const FOLDER_MAP = [
-        'A_Competences_PDF'           => ['competences',         'pdf'],
-        'B_Syllabus_PDF'              => ['syllabus',            'pdf'],
-        'B_Enonce_PDF'                => ['syllabus',            'pdf'],
-        'C_Presentation'              => ['presentation',        'pptx'],
-        'C_Presentation_PDF'          => ['presentation',        'pdf'],
-        'C_Solution_PDF'              => ['evaluation_solution', 'pdf'],
-        'D_Exercices'                 => ['exercise',            'html'],
-        'D_Exercices_PDF'             => ['exercise',            'pdf'],
-        'D_Exercices_Solution'        => ['exercise_solution',   'html'],
-        'D_Exercices_Solution_PDF'    => ['exercise_solution',   'pdf'],
-        'D_Grille_Evaluation'         => ['evaluation',          'xlsx'],
-        'D_Grille_Evaluation_PDF'     => ['evaluation',          'pdf'],
-        'E_Revisions'                 => ['revision',            'html'],
-        'E_Revisions_PDF'             => ['revision',            'pdf'],
-        'E_Revisions_Solution'        => ['revision_solution',   'html'],
-        'E_Revisions_Solution_PDF'    => ['revision_solution',   'pdf'],
-        'F_Evaluations'               => ['evaluation',          'html'],
-        'F_Evaluations_PDF'           => ['evaluation',          'pdf'],
-        'F_Evaluations_Solution'      => ['evaluation_solution', 'html'],
-        'F_Evaluations_Solution_PDF'  => ['evaluation_solution', 'pdf'],
+    private const LAYOUTS = [
+        'ttr'   => ['module' => '/^M\d/',                 'chapter' => '/^Chap\d|^Bilan$/'],
+        'socle' => ['module' => '/^(Decouverte|Option)$/', 'chapter' => '/^[SU]\d+_/'],
+    ];
+
+    // subfolder name → [resource type, extensions to import, visible to students]
+    private const FOLDER_MAP_TTR = [
+        'A_Competences_PDF'           => ['competences',         ['pdf'],  true],
+        'B_Syllabus_PDF'              => ['syllabus',            ['pdf'],  true],
+        'B_Enonce_PDF'                => ['syllabus',            ['pdf'],  true],
+        'C_Presentation'              => ['presentation',        ['pptx'], true],
+        'C_Presentation_PDF'          => ['presentation',        ['pdf'],  true],
+        'C_Solution_PDF'              => ['evaluation_solution', ['pdf'],  true],
+        'D_Exercices'                 => ['exercise',            ['html'], true],
+        'D_Exercices_PDF'             => ['exercise',            ['pdf'],  true],
+        'D_Exercices_Solution'        => ['exercise_solution',   ['html'], true],
+        'D_Exercices_Solution_PDF'    => ['exercise_solution',   ['pdf'],  true],
+        'D_Grille_Evaluation'         => ['evaluation',          ['xlsx'], true],
+        'D_Grille_Evaluation_PDF'     => ['evaluation',          ['pdf'],  true],
+        'E_Revisions'                 => ['revision',            ['html'], true],
+        'E_Revisions_PDF'             => ['revision',            ['pdf'],  true],
+        'E_Revisions_Solution'        => ['revision_solution',   ['html'], true],
+        'E_Revisions_Solution_PDF'    => ['revision_solution',   ['pdf'],  true],
+        'F_Evaluations'               => ['evaluation',          ['html'], true],
+        'F_Evaluations_PDF'           => ['evaluation',          ['pdf'],  true],
+        'F_Evaluations_Solution'      => ['evaluation_solution', ['html'], true],
+        'F_Evaluations_Solution_PDF'  => ['evaluation_solution', ['pdf'],  true],
+    ];
+
+    // Le déroulé prof est importé mais jamais montré aux élèves.
+    private const FOLDER_MAP_SOCLE = [
+        'A_Deroule_Prof'              => ['syllabus',     ['docx'],                 false],
+        'A_Deroule_Prof_PDF'          => ['syllabus',     ['pdf'],                  false],
+        'B_Presentation'              => ['presentation', ['pptx'],                 true],
+        'B_Presentation_PDF'          => ['presentation', ['pdf'],                  true],
+        'C_Fiche_Eleve'               => ['syllabus',     ['docx'],                 true],
+        'C_Fiche_Eleve_PDF'           => ['syllabus',     ['pdf'],                  true],
+        'D_Exercices'                 => ['exercise',     ['html'],                 true],
+        'D_Atelier'                   => ['exercise',     ['html'],                 true],
+        'D_Ressources'                => ['syllabus',     ['docx','pptx','xlsx'],   true],
+        'D_Ressources_PDF'            => ['syllabus',     ['pdf'],                  true],
+        'E_Competences'               => ['competences',  ['docx'],                 true],
+        'E_Competences_PDF'           => ['competences',  ['pdf'],                  true],
+    ];
+
+    /** Les noms de dossiers perdent les accents : on les restitue ici. */
+    private const LABELS = [
+        'Decouverte'                    => 'Découverte',
+        'S3_Mon_robot_reagit'           => 'S3 - Mon robot réagit',
+        'U1_Jeux_codeorg'               => 'U1 - Jeux Code.org',
+        'U3_La_machine_decodee'         => 'U3 - La machine décodée',
+        'U4_Creation_numerique'         => 'U4 - Création numérique',
+        'U6_Ma_premiere_page_web'       => 'U6 - Ma première page web',
     ];
 
     private const TYPE_ORDER = [
@@ -61,15 +103,19 @@ class CoursesSyncCommand extends Command
     ];
 
     private bool $dryRun;
+    private bool $structureOnly;
     private int $teacherId;
     private int $created = 0;
     private int $updated = 0;
     private int $skipped = 0;
+    private int $coursesCreated = 0;
 
     public function handle(): int
     {
         $this->dryRun = (bool) $this->option('dry-run');
+        $this->structureOnly = (bool) $this->option('structure-only');
         $source = rtrim((string) $this->option('source'), '\\/');
+        $only = $this->option('class');
 
         if (!is_dir($source)) {
             $this->error("Dossier introuvable : {$source}");
@@ -89,18 +135,27 @@ class CoursesSyncCommand extends Command
         if ($this->dryRun) {
             $this->warn('Mode DRY-RUN — aucune écriture en base ni sur disque');
         }
+        if ($this->structureOnly) {
+            $this->warn('Mode STRUCTURE-ONLY — classes, sections et cours seulement, aucun fichier importé');
+        }
         $this->info("Source     : {$source}");
         $this->info("Professeur : {$teacher->email}");
         $this->newLine();
 
         foreach (new \DirectoryIterator($source) as $item) {
             if (!$item->isDir() || $item->isDot()) continue;
-            if (!array_key_exists($item->getFilename(), self::CLASS_NAMES)) continue;
-            $this->processClass($item->getPathname(), $item->getFilename());
+            $folder = $item->getFilename();
+            if (!array_key_exists($folder, self::PROFILES)) continue;
+            if ($only && $folder !== $only) continue;
+            $this->processClass($item->getPathname(), $folder);
         }
 
         $this->newLine();
-        $this->info("Terminé — Créés : {$this->created} | Mis à jour : {$this->updated} | Inchangés : {$this->skipped}");
+        if ($this->structureOnly) {
+            $this->info("Terminé — Cours créés : {$this->coursesCreated}");
+        } else {
+            $this->info("Terminé — Créés : {$this->created} | Mis à jour : {$this->updated} | Inchangés : {$this->skipped}");
+        }
         return 0;
     }
 
@@ -108,94 +163,130 @@ class CoursesSyncCommand extends Command
 
     private function processClass(string $path, string $folder): void
     {
-        $classCode = self::CLASS_NAMES[$folder];
-        $this->line("<fg=cyan>▶ {$classCode}</>");
+        $profile = self::PROFILES[$folder];
+        $layout = self::LAYOUTS[$profile['layout']];
+        $this->line("<fg=cyan>▶ {$profile['code']}</>");
 
-        foreach ($this->sortedDirs($path, '/^M\d/') as $moduleDir) {
-            $this->processModule($moduleDir, $classCode);
+        $class = $profile['mode'] === 'class' ? $this->ensureClass($profile) : null;
+        $order = 1;
+
+        foreach ($this->sortedDirs($path, $layout['module']) as $moduleDir) {
+            $this->processModule($moduleDir, $profile, $layout, $class, $order);
+            $order++;
         }
     }
 
-    // ── Module ────────────────────────────────────────────────────────────────
-
-    private function processModule(string $path, string $classCode): void
+    private function ensureClass(array $profile): ?SchoolClass
     {
-        $moduleCode = $this->formatModuleCode(basename($path));
-        $this->line("  <fg=yellow>⊕ {$moduleCode}</>");
+        if ($this->dryRun) return null;
 
-        foreach ($this->sortedDirs($path, '/^Chap\d|^Bilan$/') as $chapDir) {
-            $this->processChapter($chapDir, $classCode, $moduleCode);
+        return SchoolClass::firstOrCreate(
+            ['slug' => Str::slug($profile['class_name'])],
+            [
+                'name'      => $profile['class_name'],
+                'year'      => $profile['year'] ?? null,
+                'is_active' => true,
+            ]
+        );
+    }
+
+    // ── Module → section ──────────────────────────────────────────────────────
+
+    private function processModule(string $path, array $profile, array $layout, ?SchoolClass $class, int $order): void
+    {
+        $folder = basename($path);
+        $section = null;
+
+        if ($profile['mode'] === 'class') {
+            $label = self::LABELS[$folder] ?? str_replace('_', ' ', $folder);
+            $this->line("  <fg=yellow>⊕ {$label}</>");
+
+            if (!$this->dryRun && $class) {
+                $section = Section::firstOrCreate(
+                    ['class_id' => $class->id, 'name' => $label],
+                    ['slug' => Str::slug($profile['code'] . '-' . $label), 'order' => $order, 'is_active' => true]
+                );
+            }
+            $moduleCode = $label;
+        } else {
+            $moduleCode = $this->formatModuleCode($folder);
+            $this->line("  <fg=yellow>⊕ {$moduleCode}</>");
+        }
+
+        $chapOrder = 1;
+        foreach ($this->sortedDirs($path, $layout['chapter']) as $chapDir) {
+            $this->processChapter($chapDir, $profile, $moduleCode, $section, $chapOrder);
+            $chapOrder++;
         }
     }
 
-    // ── Chapter → library course ──────────────────────────────────────────────
+    // ── Chapter → course ──────────────────────────────────────────────────────
 
-    private function processChapter(string $path, string $classCode, string $moduleCode): void
+    private function processChapter(string $path, array $profile, string $moduleCode, ?Section $section, int $order): void
     {
-        $chapName = $this->formatChapter(basename($path));
-        $fullName = "[{$classCode} | {$moduleCode}] {$chapName}";
+        $folder = basename($path);
+        $chapName = self::LABELS[$folder] ?? $this->formatChapter($folder);
+        $attached = $profile['mode'] === 'class';
+
+        // Rattaché à une section, le nom du cours n'a pas besoin du préfixe de bibliothèque.
+        $fullName = $attached ? $chapName : "[{$profile['code']} | {$moduleCode}] {$chapName}";
         $this->line("    <fg=white>· {$chapName}</>");
 
         $course = null;
         if (!$this->dryRun) {
-            // Find by exact name — idempotent even after reassignment
-            $course = Course::where('teacher_id', $this->teacherId)
-                ->where('name', $fullName)
-                ->first();
+            // Recherche par nom exact : reste idempotent même si un cours de
+            // bibliothèque a été assigné à une section entre deux synchros.
+            $query = Course::where('teacher_id', $this->teacherId)->where('name', $fullName);
+            if ($attached) {
+                $query->where('section_id', $section?->id);
+            }
+            $course = $query->first();
 
             if (!$course) {
                 $course = Course::create([
                     'name'        => $fullName,
                     'slug'        => $this->uniqueLibrarySlug($fullName),
                     'teacher_id'  => $this->teacherId,
-                    'section_id'  => null,
-                    'is_archived' => true,
+                    'section_id'  => $attached ? $section?->id : null,
+                    'is_archived' => !$attached,
                     'is_active'   => true,
-                    'order'       => 0,
+                    'order'       => $attached ? $order : 0,
                 ]);
+                $this->coursesCreated++;
             }
         }
+
+        if ($this->structureOnly) return;
+
+        $map = $profile['layout'] === 'socle' ? self::FOLDER_MAP_SOCLE : self::FOLDER_MAP_TTR;
 
         foreach (new \DirectoryIterator($path) as $sub) {
             if (!$sub->isDir() || $sub->isDot()) continue;
             $key = $sub->getFilename();
-            if (!array_key_exists($key, self::FOLDER_MAP)) continue;
-            [$type, $mode] = self::FOLDER_MAP[$key];
-            $this->processResourceFolder($sub->getPathname(), $type, $mode, $course);
+            if (!array_key_exists($key, $map)) continue;
+            [$type, $extensions, $visible] = $map[$key];
+            $this->processResourceFolder($sub->getPathname(), $type, $extensions, $visible, $course);
         }
     }
 
     // ── Resource folder ───────────────────────────────────────────────────────
 
-    private function processResourceFolder(string $path, string $type, string $mode, ?Course $course): void
+    private function processResourceFolder(string $path, string $type, array $extensions, bool $visible, ?Course $course): void
     {
-        $ext = match ($mode) {
-            'pdf'  => 'pdf',
-            'pptx' => 'pptx',
-            'html' => 'html',
-            'xlsx' => 'xlsx',
-            default => null,
-        };
-        if (!$ext) return;
-
-        foreach (glob("{$path}/*.{$ext}") as $filePath) {
-            $this->processFile($filePath, $type, $mode, $course);
+        foreach ($extensions as $ext) {
+            foreach (glob("{$path}/*.{$ext}") as $filePath) {
+                $this->processFile($filePath, $type, $visible, $course);
+            }
         }
     }
 
     // ── Individual file ───────────────────────────────────────────────────────
 
-    private function processFile(string $filePath, string $type, string $mode, ?Course $course): void
+    private function processFile(string $filePath, string $type, bool $visible, ?Course $course): void
     {
         $fileName = basename($filePath);
         $hash = md5_file($filePath);
-        $fileType = match ($mode) {
-            'pdf'  => 'pdf',
-            'pptx' => 'pptx',
-            'xlsx' => 'xlsx',
-            'html' => 'html_interactive',
-            default => 'pdf',
-        };
+        $fileType = $this->fileTypeFor(pathinfo($filePath, PATHINFO_EXTENSION));
 
         $existing = Resource::where('source_path', $filePath)->first();
 
@@ -222,7 +313,7 @@ class CoursesSyncCommand extends Command
             'title'       => $this->formatTitle($fileName, $type),
             'source_path' => $filePath,
             'source_hash' => $hash,
-            'is_visible'  => true,
+            'is_visible'  => $visible,
         ];
 
         if ($existing) {
@@ -256,6 +347,18 @@ class CoursesSyncCommand extends Command
         return "courses/import/{$type}/{$fileName}";
     }
 
+    private function fileTypeFor(string $extension): string
+    {
+        return match (strtolower($extension)) {
+            'pdf'         => 'pdf',
+            'pptx'        => 'pptx',
+            'docx'        => 'docx',
+            'xlsx'        => 'xlsx',
+            'html', 'htm' => 'html_interactive',
+            default       => 'pdf',
+        };
+    }
+
     private function formatModuleCode(string $folder): string
     {
         // M1_HTML → M1-HTML, M4_Systeme_et_logiciels → M4-Systemeetlogiciels
@@ -269,7 +372,7 @@ class CoursesSyncCommand extends Command
     private function formatChapter(string $folder): string
     {
         if ($folder === 'Bilan') return 'Bilan';
-        if (preg_match('/^(Chap\d+)_(.+)$/', $folder, $m)) {
+        if (preg_match('/^(Chap\d+|[SU]\d+)_(.+)$/', $folder, $m)) {
             return $m[1] . ' - ' . str_replace('_', ' ', $m[2]);
         }
         return str_replace('_', ' ', $folder);

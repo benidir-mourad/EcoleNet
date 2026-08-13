@@ -18,6 +18,7 @@ class ActivityLogger
 {
     public const ENROLLMENT_APPROVED = 'enrollment.approved';
     public const ENROLLMENT_REJECTED = 'enrollment.rejected';
+    public const ENROLLMENT_TRANSFERRED = 'enrollment.transferred';
     public const USER_STATUS_CHANGED = 'user.status_changed';
     public const USER_DELETED        = 'user.deleted';
     public const CLASS_DELETED       = 'class.deleted';

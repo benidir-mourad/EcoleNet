@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, ChevronRight, BookOpen } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight, BookOpen, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherLayout from '../../components/layout/TeacherLayout';
+import ClassStudents from '../../components/teacher/ClassStudents';
 
 function Modal({ title, onClose, children }) {
   return (
@@ -24,6 +25,7 @@ export default function ClassDetailPage() {
   const { classId } = useParams();
   const qc = useQueryClient();
 
+  const [tab, setTab] = useState('sections');
   const [sectionModal, setSectionModal] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
   const [sectionForm, setSectionForm] = useState({ name: '', description: '' });
@@ -104,6 +106,28 @@ export default function ClassDetailPage() {
         {cls?.description && <p className="text-gray-500 text-sm mt-1">{cls.description}</p>}
       </div>
 
+      <div className="flex items-center gap-1 border-b border-gray-200 mb-5">
+        {[
+          { key: 'sections', label: 'Sections', icon: BookOpen },
+          { key: 'students', label: 'Élèves', icon: Users },
+        ].map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition ${
+              tab === key
+                ? 'border-indigo-600 text-indigo-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Icon size={16} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'students' && <ClassStudents classId={classId} className={cls?.name} />}
+
+      {tab === 'sections' && (<>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-700">Sections</h2>
         <button
@@ -167,6 +191,7 @@ export default function ClassDetailPage() {
           </div>
         )}
       </div>
+      </>)}
 
       {/* Section modal */}
       {(sectionModal || editingSection) && (

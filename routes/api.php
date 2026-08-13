@@ -127,6 +127,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('enrollments/pending',                    [EnrollmentController::class, 'pending']);
         Route::patch('enrollments/{enrollment}/approve',     [EnrollmentController::class, 'approve']);
         Route::patch('enrollments/{enrollment}/reject',      [EnrollmentController::class, 'reject']);
+        Route::patch('enrollments/{enrollment}/transfer',    [EnrollmentController::class, 'transfer']);
         Route::get('classes/{class}/students',               [EnrollmentController::class, 'classStudents']);
 
         // Export des notes — un classeur par classe, à reprendre pour les bulletins.

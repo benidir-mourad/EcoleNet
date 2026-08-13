@@ -89,6 +89,14 @@ trait AuthorizesCourseAccess
     {
         abort_if(!$resource->is_visible, 403, 'Resource not available.');
 
+        // La fenêtre est vérifiée côté serveur : masquer le bouton ne suffirait pas,
+        // l'URL de la ressource étant devinable depuis le cours.
+        abort_if(
+            !$resource->isWithinAvailabilityWindow(),
+            403,
+            $resource->availabilityMessage() ?? 'Resource not available.'
+        );
+
         $resource->loadMissing('course.section');
         $this->ensureStudentCanAccessCourse($request, $resource->course);
     }

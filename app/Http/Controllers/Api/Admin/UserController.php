@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -69,7 +70,18 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $label = $user->full_name;
+        $email = $user->email;
+
         $user->delete();
+
+        app(ActivityLogger::class)->record(
+            ActivityLogger::USER_DELETED,
+            "Compte supprimé : {$label} ({$email}).",
+            null,
+            ['email' => $email],
+        );
+
         return response()->json(['message' => 'User deleted.']);
     }
 
@@ -79,8 +91,19 @@ class UserController extends Controller
             'status' => 'required|in:pending,active,inactive',
         ]);
 
+        $previous = $user->status;
+
         $user->update($data);
         $this->revokeTokensIfDeactivated($user);
+
+        if ($user->status !== $previous) {
+            app(ActivityLogger::class)->record(
+                ActivityLogger::USER_STATUS_CHANGED,
+                "Statut de {$user->full_name} : {$previous} → {$user->status}.",
+                $user,
+                ['from' => $previous, 'to' => $user->status],
+            );
+        }
 
         return response()->json(['user' => $user->fresh()]);
     }

@@ -34,6 +34,8 @@ class ResourceController extends Controller
             'is_visible'   => 'boolean',
             // null = illimite ; borne les QCM d'evaluation.
             'max_attempts' => 'nullable|integer|min:1|max:50',
+            'available_from'  => 'nullable|date',
+            'available_until' => 'nullable|date|after:available_from',
         ]);
 
         $data['course_id'] = $course->id;
@@ -83,6 +85,8 @@ class ResourceController extends Controller
             'is_visible'   => 'boolean',
             // null = illimite ; borne les QCM d'evaluation.
             'max_attempts' => 'nullable|integer|min:1|max:50',
+            'available_from'  => 'nullable|date',
+            'available_until' => 'nullable|date|after:available_from',
         ]);
 
         $resource->update($data);

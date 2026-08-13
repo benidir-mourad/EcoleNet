@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\AuthorizesCourseAccess;
 use App\Models\Enrollment;
 use App\Models\SchoolClass;
+use App\Services\ActivityLogger;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -41,6 +42,13 @@ class EnrollmentController extends Controller
             $enrollment->student->update(['status' => 'active']);
         }
 
+        app(ActivityLogger::class)->record(
+            ActivityLogger::ENROLLMENT_APPROVED,
+            "Inscription de {$enrollment->student->full_name} validée dans {$enrollment->schoolClass->name}.",
+            $enrollment,
+            ['student_id' => $enrollment->student_id, 'class_id' => $enrollment->class_id],
+        );
+
         app(NotificationService::class)->create(
             $enrollment->student,
             'enrollment_approved',
@@ -57,6 +65,13 @@ class EnrollmentController extends Controller
         $this->ensureTeacherOwnsEnrollment($request, $enrollment);
 
         $enrollment->update(['status' => 'rejected']);
+
+        app(ActivityLogger::class)->record(
+            ActivityLogger::ENROLLMENT_REJECTED,
+            "Inscription de {$enrollment->student->full_name} refusée dans {$enrollment->schoolClass->name}.",
+            $enrollment,
+            ['student_id' => $enrollment->student_id, 'class_id' => $enrollment->class_id],
+        );
 
         return response()->json(['enrollment' => $enrollment->fresh()->load('student', 'schoolClass')]);
     }

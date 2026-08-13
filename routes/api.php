@@ -24,8 +24,10 @@ use App\Http\Controllers\Api\Student\ForumController as StudentForumController;
 use App\Http\Controllers\Api\Student\ProgressController;
 use App\Http\Controllers\Api\Student\WebLessonController as StudentWebLessonController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\Admin\ActivityLogController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\Teacher\SyncController;
+use App\Http\Controllers\Api\Teacher\GradeExportController;
 
 // Public routes — limitées en débit : sans cela la force brute est libre, et
 // /forgot-password permet d'inonder une boîte mail et d'épuiser le quota d'envoi.
@@ -126,6 +128,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('enrollments/{enrollment}/approve',     [EnrollmentController::class, 'approve']);
         Route::patch('enrollments/{enrollment}/reject',      [EnrollmentController::class, 'reject']);
         Route::get('classes/{class}/students',               [EnrollmentController::class, 'classStudents']);
+
+        // Export des notes — un classeur par classe, à reprendre pour les bulletins.
+        Route::get('classes/{class}/grades.xlsx',            GradeExportController::class);
 
         // Exercise submissions
         Route::post('resources/{resource}/file_exercise',    [ExerciseController::class, 'enableSubmission']);
@@ -232,5 +237,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('users/{user}',            [AdminUserController::class, 'update']);
         Route::delete('users/{user}',         [AdminUserController::class, 'destroy']);
         Route::patch('users/{user}/status',   [AdminUserController::class, 'updateStatus']);
+
+        // Journal d'audit — lecture seule, aucune route n'écrit ni ne supprime.
+        Route::get('activity-log',         [ActivityLogController::class, 'index']);
+        Route::get('activity-log/actions', [ActivityLogController::class, 'actions']);
     });
 });

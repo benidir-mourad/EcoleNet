@@ -36,6 +36,8 @@ class Resource extends Model
         'source_hash',
         'is_visible',
         'max_attempts',
+        'available_from',
+        'available_until',
         'order',
     ];
 
@@ -43,7 +45,35 @@ class Resource extends Model
         'is_visible' => 'boolean',
         'file_size' => 'integer',
         'max_attempts' => 'integer',
+        'available_from' => 'datetime',
+        'available_until' => 'datetime',
     ];
+
+    /**
+     * Une ressource sans bornes reste toujours ouverte : c'est le cas de la
+     * quasi-totalité du contenu, seules les évaluations ont une fenêtre.
+     */
+    public function isWithinAvailabilityWindow(): bool
+    {
+        if ($this->available_from && $this->available_from->isFuture()) {
+            return false;
+        }
+
+        return !($this->available_until && $this->available_until->isPast());
+    }
+
+    public function availabilityMessage(): ?string
+    {
+        if ($this->available_from && $this->available_from->isFuture()) {
+            return 'Cette ressource sera disponible le ' . $this->available_from->format('d/m/Y à H:i') . '.';
+        }
+
+        if ($this->available_until && $this->available_until->isPast()) {
+            return 'Cette ressource n\'est plus disponible depuis le ' . $this->available_until->format('d/m/Y à H:i') . '.';
+        }
+
+        return null;
+    }
 
     /**
      * Le fichier vit sur le disque privé : le client ne reçoit jamais un chemin

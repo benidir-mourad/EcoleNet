@@ -18,6 +18,7 @@ class CoursesSyncCommand extends Command
         {--teacher=teacher@ecolenet.be : Email du professeur propriétaire}
         {--class= : Ne traiter qu\'un dossier de classe (ex. 2eme)}
         {--structure-only : Créer classes, sections et cours sans importer les fichiers}
+        {--prune : Signaler et retirer les ressources dont le fichier source a disparu}
         {--dry-run : Simulation sans écriture}';
 
     protected $description = 'Importe et synchronise les cours OneDrive → Bibliothèque EcoleNet (incrémental par hash MD5)';
@@ -150,6 +151,10 @@ class CoursesSyncCommand extends Command
             $this->processClass($item->getPathname(), $folder);
         }
 
+        if ($this->option('prune')) {
+            $this->pruneVanishedSources();
+        }
+
         $this->newLine();
         if ($this->structureOnly) {
             $this->info("Terminé — Cours créés : {$this->coursesCreated}");
@@ -157,6 +162,48 @@ class CoursesSyncCommand extends Command
             $this->info("Terminé — Créés : {$this->created} | Mis à jour : {$this->updated} | Inchangés : {$this->skipped}");
         }
         return 0;
+    }
+
+    /**
+     * Un fichier supprimé ou renommé dans OneDrive laisse sa ressource en base : la
+     * synchro ne la revoit jamais et le cours continue d'afficher un document que
+     * l'enseignant croit avoir retiré. Un renommage crée en plus un doublon, la
+     * nouvelle version arrivant sous un autre source_path.
+     */
+    private function pruneVanishedSources(): void
+    {
+        $this->newLine();
+        $this->line('<fg=cyan>▶ Purge des ressources dont la source a disparu</>');
+
+        $vanished = Resource::whereNotNull('source_path')->get()
+            ->filter(fn (Resource $resource) => !is_file($resource->source_path));
+
+        if ($vanished->isEmpty()) {
+            $this->line('  aucune');
+            return;
+        }
+
+        foreach ($vanished as $resource) {
+            $this->line("  [-] {$resource->file_name}  <fg=gray>({$resource->title})</>");
+
+            if ($this->dryRun) {
+                continue;
+            }
+
+            // Le fichier copié n'est retiré que s'il n'est plus référencé ailleurs :
+            // un cours rattaché et son jumeau de bibliothèque le partagent.
+            $shared = Resource::where('file_path', $resource->file_path)
+                ->where('id', '!=', $resource->id)
+                ->exists();
+
+            if (!$shared && $resource->file_path) {
+                Storage::disk('local')->delete($resource->file_path);
+            }
+
+            $resource->delete();
+        }
+
+        $this->line('  <fg=yellow>' . $vanished->count() . ' ressource(s) ' . ($this->dryRun ? 'à retirer' : 'retirée(s)') . '</>');
     }
 
     // ── Class ─────────────────────────────────────────────────────────────────

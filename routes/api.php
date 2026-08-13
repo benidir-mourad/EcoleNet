@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Student\ProgressController;
 use App\Http\Controllers\Api\Student\WebLessonController as StudentWebLessonController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\Teacher\SyncController;
 
 // Public routes — limitées en débit : sans cela la force brute est libre, et
 // /forgot-password permet d'inonder une boîte mail et d'épuiser le quota d'envoi.
@@ -145,6 +146,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('forum/{post}/reply',     [TeacherForumController::class, 'reply']);
         Route::delete('forum/{post}',         [TeacherForumController::class, 'destroy']);
         Route::patch('forum/{post}/pin',      [TeacherForumController::class, 'togglePin']);
+
+        // Synchronisation OneDrive — la commande écrit sur le disque et en base,
+        // on la réserve donc à l'administrateur du contenu.
+        Route::get('sync/status',   [SyncController::class, 'status']);
+        Route::post('sync/preview', [SyncController::class, 'preview'])->middleware('throttle:10,1');
+        Route::post('sync/run',     [SyncController::class, 'run'])->middleware('throttle:3,5');
 
         // Stats
         Route::get('stats/overview',            [StatsController::class, 'overview']);

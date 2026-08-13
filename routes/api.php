@@ -26,11 +26,12 @@ use App\Http\Controllers\Api\Student\WebLessonController as StudentWebLessonCont
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\FileController;
 
-// Public routes
-Route::post('/register',        [AuthController::class, 'register']);
-Route::post('/login',           [AuthController::class, 'login']);
-Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
-Route::post('/reset-password',  [PasswordResetController::class, 'reset']);
+// Public routes — limitées en débit : sans cela la force brute est libre, et
+// /forgot-password permet d'inonder une boîte mail et d'épuiser le quota d'envoi.
+Route::post('/register',        [AuthController::class, 'register'])->middleware('throttle:10,60');
+Route::post('/login',           [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:3,10');
+Route::post('/reset-password',  [PasswordResetController::class, 'reset'])->middleware('throttle:5,10');
 
 // Fichiers pédagogiques — la signature de l'URL tient lieu d'autorisation, car
 // une iframe ou une balise img ne peut pas porter d'en-tête Authorization.

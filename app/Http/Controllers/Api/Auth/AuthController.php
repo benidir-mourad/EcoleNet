@@ -48,12 +48,16 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user) {
-            return response()->json(['message' => 'Aucun compte trouvé avec cet email.'], 401);
-        }
+        // Message unique : distinguer « email inconnu » de « mot de passe incorrect »
+        // permettait de vérifier qu'une adresse possède un compte sur la plateforme.
+        // Le hachage est calculé même sans utilisateur, pour que le temps de réponse
+        // ne trahisse pas l'existence du compte.
+        if (!$user || !Hash::check($data['password'], $user->password)) {
+            if (!$user) {
+                Hash::make($data['password']);
+            }
 
-        if (!Hash::check($data['password'], $user->password)) {
-            return response()->json(['message' => 'Mot de passe incorrect.'], 401);
+            return response()->json(['message' => 'Email ou mot de passe incorrect.'], 401);
         }
 
         // 'pending' peut se connecter : le tableau de bord affiche l'état d'attente de validation.
@@ -85,19 +89,30 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        // 'avatar' n'est volontairement pas modifiable ici : le seul chemin légitime
+        // est uploadAvatar(), qui valide le fichier. L'accepter en chaîne libre
+        // laissait pointer l'image vers n'importe quel chemin.
         $data = $request->validate([
             'first_name' => 'sometimes|string|max:100',
             'last_name'  => 'sometimes|string|max:100',
             'email'      => 'sometimes|email|unique:users,email,' . $user->id,
             'password'   => ['sometimes', 'confirmed', Password::min(8)],
-            'avatar'     => 'sometimes|nullable|string',
         ]);
 
-        if (isset($data['password'])) {
+        $passwordChanged = isset($data['password']);
+
+        if ($passwordChanged) {
             $data['password'] = Hash::make($data['password']);
         }
 
         $user->update($data);
+
+        // Changer son mot de passe doit fermer les autres sessions : sinon le geste
+        // réflexe après une compromission ne déconnecte pas l'attaquant.
+        if ($passwordChanged) {
+            $current = $request->user()->currentAccessToken();
+            $user->tokens()->when($current, fn ($q) => $q->where('id', '!=', $current->id))->delete();
+        }
 
         return response()->json(['user' => $this->userResource($user->fresh())]);
     }

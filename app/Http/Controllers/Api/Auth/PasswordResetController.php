@@ -19,17 +19,17 @@ class PasswordResetController extends Controller
 
         $status = Password::sendResetLink($request->only('email'));
 
-        return match ($status) {
-            Password::RESET_LINK_SENT => response()->json([
-                'message' => 'Un lien de réinitialisation a été envoyé à votre adresse email.',
-            ]),
-            Password::RESET_THROTTLED => response()->json([
+        if ($status === Password::RESET_THROTTLED) {
+            return response()->json([
                 'message' => 'Trop de tentatives. Veuillez réessayer dans quelques minutes.',
-            ], 429),
-            default => response()->json([
-                'message' => 'Aucun compte trouvé avec cette adresse email.',
-            ], 422),
-        };
+            ], 429);
+        }
+
+        // Réponse identique que le compte existe ou non : révéler l'absence d'un
+        // compte permettait d'énumérer les adresses inscrites sur la plateforme.
+        return response()->json([
+            'message' => 'Si un compte existe pour cette adresse, un lien de réinitialisation vient d\'être envoyé.',
+        ]);
     }
 
     public function reset(Request $request)
@@ -47,6 +47,11 @@ class PasswordResetController extends Controller
                     'password' => Hash::make($password),
                 ])->setRememberToken(Str::random(60));
                 $user->save();
+
+                // Une réinitialisation fait suite à un doute sur le compte :
+                // toutes les sessions ouvertes doivent tomber.
+                $user->tokens()->delete();
+
                 event(new PasswordReset($user));
             }
         );

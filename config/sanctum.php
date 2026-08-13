@@ -47,7 +47,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Quatorze jours. Sans expiration, un jeton dérobé restait valable
+    // indéfiniment : la base en comptait qui dataient de plusieurs mois.
+    'expiration' => env('SANCTUM_EXPIRATION', 60 * 24 * 14),
 
     /*
     |--------------------------------------------------------------------------

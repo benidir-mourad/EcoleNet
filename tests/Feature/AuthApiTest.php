@@ -49,26 +49,64 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('user.email', 'teacher@example.com');
     }
 
-    public function test_wrong_password_is_rejected(): void
+    /**
+     * Le message ne doit pas trahir l'existence du compte : c'est ce qui permettait
+     * d'énumérer les adresses inscrites. Les deux cas répondent à l'identique.
+     */
+    public function test_login_does_not_reveal_whether_the_account_exists(): void
     {
         $teacher = $this->user('teacher', 'active', ['email' => 'teacher@example.com']);
+        $expected = 'Email ou mot de passe incorrect.';
 
         $this->postJson('/api/login', [
             'email' => $teacher->email,
             'password' => 'wrong-password',
         ])
             ->assertUnauthorized()
-            ->assertJsonPath('message', 'Mot de passe incorrect.');
-    }
+            ->assertJsonPath('message', $expected);
 
-    public function test_unknown_email_is_rejected(): void
-    {
         $this->postJson('/api/login', [
             'email' => 'inconnu@example.com',
             'password' => 'password',
         ])
             ->assertUnauthorized()
-            ->assertJsonPath('message', 'Aucun compte trouvé avec cet email.');
+            ->assertJsonPath('message', $expected);
+    }
+
+    public function test_forgot_password_does_not_reveal_whether_the_account_exists(): void
+    {
+        $this->user('student', 'active', ['email' => 'connu@example.com']);
+        $expected = 'Si un compte existe pour cette adresse, un lien de réinitialisation vient d\'être envoyé.';
+
+        $this->postJson('/api/forgot-password', ['email' => 'connu@example.com'])
+            ->assertOk()
+            ->assertJsonPath('message', $expected);
+
+        $this->postJson('/api/forgot-password', ['email' => 'inconnu@example.com'])
+            ->assertOk()
+            ->assertJsonPath('message', $expected);
+    }
+
+    public function test_changing_the_password_closes_other_sessions(): void
+    {
+        $user = $this->user('student', 'active');
+        $otherDevice = $user->createToken('autre_appareil')->plainTextToken;
+        $current = $user->createToken('session_courante')->plainTextToken;
+
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', "Bearer {$current}")
+            ->putJson('/api/profile', [
+                'password' => 'nouveau-mot-de-passe',
+                'password_confirmation' => 'nouveau-mot-de-passe',
+            ])
+            ->assertOk();
+
+        // La session qui a fait le changement survit, les autres tombent.
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', "Bearer {$otherDevice}")->getJson('/api/me')->assertUnauthorized();
+
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', "Bearer {$current}")->getJson('/api/me')->assertOk();
     }
 
     public function test_user_can_update_profile(): void

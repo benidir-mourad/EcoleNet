@@ -625,7 +625,7 @@ class ExerciseController extends Controller
         }
 
         $file = $request->file('file');
-        $path = $file->store('templates/' . $resource->course_id, 'public');
+        $path = $file->store('templates/' . $resource->course_id, 'local');
 
         $exercise->update([
             'template_file_path' => $path,

@@ -24,12 +24,22 @@ use App\Http\Controllers\Api\Student\ForumController as StudentForumController;
 use App\Http\Controllers\Api\Student\ProgressController;
 use App\Http\Controllers\Api\Student\WebLessonController as StudentWebLessonController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\FileController;
 
 // Public routes
 Route::post('/register',        [AuthController::class, 'register']);
 Route::post('/login',           [AuthController::class, 'login']);
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
 Route::post('/reset-password',  [PasswordResetController::class, 'reset']);
+
+// Fichiers pédagogiques — la signature de l'URL tient lieu d'autorisation, car
+// une iframe ou une balise img ne peut pas porter d'en-tête Authorization.
+// Les URL sont émises par l'API aux seuls utilisateurs déjà autorisés.
+Route::middleware('signed')->group(function () {
+    Route::get('/files/resources/{resource}',     [FileController::class, 'resource'])->name('files.resource');
+    Route::get('/files/submissions/{submission}', [FileController::class, 'submission'])->name('files.submission');
+    Route::get('/files/templates/{exercise}',     [FileController::class, 'template'])->name('files.template');
+});
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {

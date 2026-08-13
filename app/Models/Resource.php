@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SignedFileUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -41,6 +42,21 @@ class Resource extends Model
         'is_visible' => 'boolean',
         'file_size' => 'integer',
     ];
+
+    /**
+     * Le fichier vit sur le disque privé : le client ne reçoit jamais un chemin
+     * exploitable, seulement une URL signée à durée limitée.
+     */
+    protected $appends = ['file_url'];
+
+    protected $hidden = ['source_path'];
+
+    public function getFileUrlAttribute(): ?string
+    {
+        return $this->file_path
+            ? SignedFileUrl::make('files.resource', 'resource', $this->id)
+            : null;
+    }
 
     public function course()
     {

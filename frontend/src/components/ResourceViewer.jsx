@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { X, ZoomIn, ZoomOut, Download, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
 import ReactPlayer from 'react-player';
-import { storageUrl } from '../config';
-
-function fileUrl(path) {
-  return storageUrl(path);
-}
 
 /* ── PDF viewer ─────────────────────────────────────────────────────────── */
 function PdfViewer({ url }) {
@@ -68,12 +63,15 @@ function VideoViewer({ url, isYoutube }) {
 }
 
 /* ── HTML embed viewer ──────────────────────────────────────────────────── */
+// allow-same-origin est volontairement absent du sandbox : combiné à allow-scripts
+// il annulerait le bac à sable, et le document embarqué pourrait alors lire le jeton
+// de session dans localStorage. Les leçons interactives n'en ont pas besoin.
 function HtmlEmbedViewer({ url, title }) {
   return (
     <div className="flex-1 bg-white flex flex-col">
       <iframe
         src={url}
-        sandbox="allow-scripts allow-same-origin allow-forms"
+        sandbox="allow-scripts allow-forms allow-popups"
         className="flex-1 w-full border-0"
         title={title}
         style={{ minHeight: '70vh' }}
@@ -164,7 +162,9 @@ function OfficeViewer({ url, fileType, fileName }) {
 export default function ResourceViewer({ resource, onClose }) {
   if (!resource) return null;
 
-  const url = resource.file_path ? fileUrl(resource.file_path) : resource.external_url;
+  // file_url est une URL signée émise par l'API : le chemin de stockage n'est
+  // jamais exposé et le lien cesse de fonctionner passé quelques heures.
+  const url = resource.file_url || resource.external_url;
   const ft = resource.file_type;
 
   const renderContent = () => {
@@ -214,8 +214,8 @@ export default function ResourceViewer({ resource, onClose }) {
           )}
         </div>
         <div className="flex items-center gap-2 ml-4 shrink-0">
-          {resource.file_path && (
-            <a href={fileUrl(resource.file_path)} download={resource.file_name}
+          {resource.file_url && (
+            <a href={resource.file_url} download={resource.file_name}
               className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition">
               <Download size={18} />
             </a>

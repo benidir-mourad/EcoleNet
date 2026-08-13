@@ -22,7 +22,7 @@ class CoursesSyncCommandTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake('local');
 
         // Arborescence minimale au format 'socle', sous un dossier 01_Cours
         // pour que le chemin de stockage soit calculé comme en production.

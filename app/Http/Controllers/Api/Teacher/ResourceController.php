@@ -118,15 +118,20 @@ class ResourceController extends Controller
         $this->ensureTeacherOwnsResource($request, $resource);
 
         $request->validate([
-            'file' => 'required|file|max:51200',
+            // Le HTML est admis : les leçons interactives en dépendent. Il est servi
+            // depuis le disque privé, par une route qui impose son propre sandbox.
+            'file' => [
+                'required', 'file', 'max:51200',
+                'extensions:pdf,pptx,docx,xlsx,html,htm,png,jpg,jpeg,gif,webp,svg,mp4,webm,zip',
+            ],
         ]);
 
         if ($resource->file_path) {
-            Storage::delete($resource->file_path);
+            Storage::disk('local')->delete($resource->file_path);
         }
 
         $file = $request->file('file');
-        $path = $file->store('resources/' . $resource->course_id, 'public');
+        $path = $file->store('resources/' . $resource->course_id, 'local');
 
         $resource->update([
             'file_path'  => $path,

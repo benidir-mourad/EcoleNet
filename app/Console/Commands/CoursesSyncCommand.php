@@ -350,7 +350,7 @@ class CoursesSyncCommand extends Command
         }
 
         $storagePath = $this->buildStoragePath($filePath, $type, $fileName);
-        Storage::disk('public')->put($storagePath, file_get_contents($filePath));
+        Storage::disk('local')->put($storagePath, file_get_contents($filePath));
 
         // Ce que la synchro possède : l'état du fichier, qu'elle réécrit à chaque passage.
         $data = [

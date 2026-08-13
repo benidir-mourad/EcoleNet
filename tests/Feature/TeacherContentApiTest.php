@@ -102,6 +102,7 @@ class TeacherContentApiTest extends TestCase
 
     public function test_teacher_can_update_delete_chapter_and_upload_resource_file(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
 
         $teacher = $this->user('teacher');
@@ -122,7 +123,11 @@ class TeacherContentApiTest extends TestCase
             ->assertJsonPath('resource.file_type', 'pdf')
             ->assertJsonPath('resource.file_name', 'support.pdf');
 
-        Storage::disk('public')->assertExists($resource->fresh()->file_path);
+        // Le fichier va sur le disque privé, jamais sur le disque public exposé
+        // statiquement par le serveur web.
+        $storedPath = $resource->fresh()->file_path;
+        Storage::disk('local')->assertExists($storedPath);
+        Storage::disk('public')->assertMissing($storedPath);
 
         $this->actingAs($teacher, 'sanctum')
             ->deleteJson("/api/teacher/chapters/{$chapter->id}")

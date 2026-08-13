@@ -176,7 +176,7 @@ export default function ExercisePage() {
             <p className="text-xs text-indigo-600 mt-0.5">{exercise.template_file_name}</p>
           </div>
           <a
-            href={`${import.meta.env.VITE_API_URL?.replace('/api', '')}/storage/${exercise.template_file_path}`}
+            href={exercise.template_file_url}
             download
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 transition">
             <Download size={14} /> Télécharger

@@ -5,7 +5,7 @@ import {
   LogOut, Camera, X, GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { storageUrl } from '../../config';
+import { avatarUrl as buildAvatarUrl } from '../../config';
 import { useMutation } from '@tanstack/react-query';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ function ProfileModal({ onClose }) {
     password_confirmation: '',
   });
   const [preview, setPreview] = useState(
-    user?.avatar ? storageUrl(user.avatar) : null
+    user?.avatar ? buildAvatarUrl(user.avatar) : null
   );
   const [avatarFile, setAvatarFile] = useState(null);
 
@@ -194,7 +194,7 @@ export default function StudentLayout({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
-  const avatarUrl = user?.avatar ? storageUrl(user.avatar) : null;
+  const currentAvatar = user?.avatar ? buildAvatarUrl(user.avatar) : null;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -228,8 +228,8 @@ export default function StudentLayout({ children }) {
             className="flex items-center gap-3 w-full hover:bg-emerald-700/50 rounded-lg p-2 transition text-left"
           >
             <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center shrink-0 overflow-hidden border border-emerald-500">
-              {avatarUrl
-                ? <img src={avatarUrl} alt="avatar" className="w-9 h-9 object-cover" />
+              {currentAvatar
+                ? <img src={currentAvatar} alt="avatar" className="w-9 h-9 object-cover" />
                 : <span className="text-sm font-semibold">{initials}</span>
               }
             </div>

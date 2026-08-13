@@ -23,7 +23,12 @@ class SubmissionController extends Controller
         $student = $request->user();
 
         $data = $request->validate([
-            'file'    => 'nullable|file|max:20480',
+            // Contenu déposé par un élève : liste blanche stricte, pas de HTML.
+            // Un .html rendu depuis notre domaine servirait d'hameçonnage crédible.
+            'file' => [
+                'nullable', 'file', 'max:20480',
+                'extensions:pdf,docx,odt,xlsx,ods,pptx,odp,txt,zip,png,jpg,jpeg,webp',
+            ],
             'content' => 'nullable|string',
         ]);
 
@@ -33,7 +38,7 @@ class SubmissionController extends Controller
 
         $filePath = null;
         if ($request->hasFile('file')) {
-            $filePath = $request->file('file')->store('submissions/' . $student->id, 'public');
+            $filePath = $request->file('file')->store('submissions/' . $student->id, 'local');
         }
 
         $evaluation = $this->evaluateIfNeeded($exercise, $data['content'] ?? '');
@@ -89,7 +94,12 @@ class SubmissionController extends Controller
         $student = $request->user();
 
         $data = $request->validate([
-            'file'    => 'nullable|file|max:20480',
+            // Contenu déposé par un élève : liste blanche stricte, pas de HTML.
+            // Un .html rendu depuis notre domaine servirait d'hameçonnage crédible.
+            'file' => [
+                'nullable', 'file', 'max:20480',
+                'extensions:pdf,docx,odt,xlsx,ods,pptx,odp,txt,zip,png,jpg,jpeg,webp',
+            ],
             'content' => 'nullable|string',
         ]);
 
@@ -99,7 +109,7 @@ class SubmissionController extends Controller
 
         $filePath = null;
         if ($request->hasFile('file')) {
-            $filePath = $request->file('file')->store('submissions/' . $student->id, 'public');
+            $filePath = $request->file('file')->store('submissions/' . $student->id, 'local');
         }
 
         $evaluation = $this->evaluateIfNeeded($exercise, $data['content'] ?? '');

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { storageUrl } from '../../config';
+import { avatarUrl as buildAvatarUrl } from '../../config';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageCircle, Pin, Plus, ChevronDown, ChevronUp, Send, Trash2 } from 'lucide-react';
@@ -10,7 +10,7 @@ import useAuthStore from '../../store/authStore';
 
 function Avatar({ user, color = 'emerald' }) {
   const initials = `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase();
-  const avatarUrl = user?.avatar ? storageUrl(user.avatar) : null;
+  const avatarUrl = buildAvatarUrl(user?.avatar);
   return (
     <div className={`w-8 h-8 rounded-full bg-${color}-100 flex items-center justify-center overflow-hidden shrink-0`}>
       {avatarUrl

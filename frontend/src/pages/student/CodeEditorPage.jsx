@@ -48,10 +48,9 @@ export default function CodeEditorPage() {
   const expectedOutput = exercise?.content?.expected_output;
   const autoCorrect = Boolean(exercise?.auto_correct);
   const templateFileName = exercise?.template_file_name;
-  const templateFilePath = exercise?.template_file_path;
-  const templateUrl = templateFilePath
-    ? `${import.meta.env.VITE_API_URL?.replace('/api', '')}/storage/${templateFilePath}`
-    : null;
+  // URL signée fournie par l'API. Auparavant construite depuis VITE_API_URL, une
+  // variable qui n'a jamais existé : le lien pointait sur « undefined/storage/… ».
+  const templateUrl = exercise?.template_file_url || null;
 
   const LANG_COLORS = {
     javascript: 'bg-yellow-100 text-yellow-800',

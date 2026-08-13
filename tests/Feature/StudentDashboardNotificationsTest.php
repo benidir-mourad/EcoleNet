@@ -165,7 +165,10 @@ class StudentDashboardNotificationsTest extends TestCase
     {
         $teacher = $this->user('teacher');
         $student = $this->user('student', 'pending');
-        $class = SchoolClass::create(['name' => '4TTI', 'slug' => '4tti', 'is_active' => true]);
+        $class = SchoolClass::create([
+            'name' => '4TTI', 'slug' => '4tti', 'is_active' => true,
+            'teacher_id' => $teacher->id,
+        ]);
         $enrollment = Enrollment::create([
             'student_id' => $student->id,
             'class_id' => $class->id,

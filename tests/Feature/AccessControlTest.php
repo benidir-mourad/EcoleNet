@@ -112,6 +112,69 @@ class AccessControlTest extends TestCase
         $this->assertSame($course->name, $course->fresh()->name);
     }
 
+    public function test_teacher_cannot_touch_another_teachers_class_or_sections(): void
+    {
+        $owner = $this->user('teacher');
+        $intruder = $this->user('teacher');
+
+        $class = SchoolClass::create([
+            'name' => '5TTI', 'slug' => '5tti', 'is_active' => true, 'teacher_id' => $owner->id,
+        ]);
+        $section = Section::create([
+            'class_id' => $class->id, 'name' => 'Informatique',
+            'slug' => 'info-5tti', 'order' => 1, 'is_active' => true,
+        ]);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->getJson('/api/teacher/classes')
+            ->assertOk()
+            ->assertJsonCount(0, 'classes');
+
+        $this->actingAs($intruder, 'sanctum')
+            ->putJson("/api/teacher/sections/{$section->id}", ['name' => 'Détournée'])
+            ->assertForbidden();
+
+        // Une section vide était auparavant réputée accessible à tous : le contrôle
+        // se lisait sur son contenu au lieu de la classe qui la porte.
+        $empty = Section::create([
+            'class_id' => $class->id, 'name' => 'Vide',
+            'slug' => 'vide-5tti', 'order' => 2, 'is_active' => true,
+        ]);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->deleteJson("/api/teacher/sections/{$empty->id}")
+            ->assertForbidden();
+
+        $this->assertSame('Informatique', $section->fresh()->name);
+        $this->assertDatabaseHas('sections', ['id' => $empty->id]);
+    }
+
+    public function test_teacher_cannot_approve_an_enrollment_of_another_teachers_class(): void
+    {
+        $owner = $this->user('teacher');
+        $intruder = $this->user('teacher');
+        $student = $this->user('student', 'pending');
+
+        $class = SchoolClass::create([
+            'name' => '6TTI', 'slug' => '6tti', 'is_active' => true, 'teacher_id' => $owner->id,
+        ]);
+        $enrollment = Enrollment::create([
+            'student_id' => $student->id, 'class_id' => $class->id, 'status' => 'pending',
+        ]);
+
+        // Valider une inscription active aussi le compte : ce chemin doit rester fermé.
+        $this->actingAs($intruder, 'sanctum')
+            ->patchJson("/api/teacher/enrollments/{$enrollment->id}/approve")
+            ->assertForbidden();
+
+        $this->assertSame('pending', $student->fresh()->status);
+
+        $this->actingAs($intruder, 'sanctum')
+            ->getJson('/api/teacher/enrollments/pending')
+            ->assertOk()
+            ->assertJsonCount(0, 'enrollments');
+    }
+
     public function test_admin_can_update_any_teacher_course(): void
     {
         $admin = $this->user('admin');

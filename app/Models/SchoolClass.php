@@ -12,6 +12,7 @@ class SchoolClass extends Model
     protected $table = 'classes';
 
     protected $fillable = [
+        'teacher_id',
         'name',
         'slug',
         'description',
@@ -22,6 +23,19 @@ class SchoolClass extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function teacher()
+    {
+        return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    /** Restreint aux classes que l'utilisateur peut gérer ; un admin les voit toutes. */
+    public function scopeManageableBy($query, User $user)
+    {
+        return $user->role === 'admin'
+            ? $query
+            : $query->where('teacher_id', $user->id);
+    }
 
     public function sections()
     {

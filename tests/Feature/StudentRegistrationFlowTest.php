@@ -16,7 +16,10 @@ class StudentRegistrationFlowTest extends TestCase
     public function test_a_new_student_can_go_from_registration_to_course_access(): void
     {
         $teacher = $this->user('teacher');
-        $class = SchoolClass::create(['name' => '4TTR', 'slug' => '4ttr', 'is_active' => true]);
+        $class = SchoolClass::create([
+            'name' => '4TTR', 'slug' => '4ttr', 'is_active' => true,
+            'teacher_id' => $teacher->id,
+        ]);
 
         // 1. Inscription : le compte est créé en attente, avec un token.
         $registration = $this->postJson('/api/register', [

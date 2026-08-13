@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\Enrollment;
 use App\Models\Message;
+use App\Models\SchoolClass;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -47,6 +49,8 @@ class MessageController extends Controller
 
     public function send(Request $request, User $user)
     {
+        $this->ensureRecipientIsOwnStudent($request, $user);
+
         $data = $request->validate([
             'content' => 'required|string|max:5000',
         ]);
@@ -66,5 +70,24 @@ class MessageController extends Controller
         );
 
         return response()->json(['message' => $message->load('sender', 'receiver')], 201);
+    }
+
+    /**
+     * Sans cette borne, un enseignant pouvait écrire à n'importe quel compte par
+     * simple identifiant numérique, administrateurs compris — un vecteur
+     * d'hameçonnage interne crédible puisque l'expéditeur est légitime.
+     */
+    private function ensureRecipientIsOwnStudent(Request $request, User $recipient): void
+    {
+        if ($request->user()->role === 'admin') {
+            return;
+        }
+
+        $shareAClass = Enrollment::where('student_id', $recipient->id)
+            ->where('status', 'approved')
+            ->whereIn('class_id', SchoolClass::manageableBy($request->user())->select('id'))
+            ->exists();
+
+        abort_if(!$shareAClass, 403, 'Ce destinataire ne fait pas partie de vos classes.');
     }
 }

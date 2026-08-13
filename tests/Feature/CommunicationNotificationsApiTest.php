@@ -16,6 +16,8 @@ class CommunicationNotificationsApiTest extends TestCase
     {
         $teacher = $this->user('teacher');
         $student = $this->user('student');
+        // Un enseignant n'écrit qu'aux élèves de ses classes.
+        $this->enroll($student, $this->schoolClass());
 
         $notificationId = $this->actingAs($teacher, 'sanctum')
             ->postJson("/api/teacher/messages/{$student->id}", ['content' => 'Bonjour'])
@@ -51,6 +53,9 @@ class CommunicationNotificationsApiTest extends TestCase
         $teacher = $this->user('teacher');
         $student = $this->user('student');
         $other = $this->user('student');
+        $class = $this->schoolClass();
+        $this->enroll($student, $class);
+        $this->enroll($other, $class);
 
         $this->actingAs($teacher, 'sanctum')
             ->postJson("/api/teacher/messages/{$student->id}", ['content' => 'Bonjour'])

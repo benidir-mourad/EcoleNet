@@ -21,9 +21,19 @@ class StatsController extends Controller
     {
         $teacherId = $request->user()->id;
 
-        $totalClasses = SchoolClass::count();
-        $totalStudents = Enrollment::where('status', 'approved')->distinct('student_id')->count();
-        $pendingEnrollments = Enrollment::where('status', 'pending')->count();
+        // Ces trois compteurs étaient globaux alors que total_courses juste en
+        // dessous était déjà cloisonné : incohérence dans un même écran, et fuite
+        // des effectifs de l'établissement dès qu'un second enseignant existe.
+        $classIds = SchoolClass::manageableBy($request->user())->select('id');
+
+        $totalClasses = SchoolClass::manageableBy($request->user())->count();
+        $totalStudents = Enrollment::where('status', 'approved')
+            ->whereIn('class_id', $classIds)
+            ->distinct('student_id')
+            ->count();
+        $pendingEnrollments = Enrollment::where('status', 'pending')
+            ->whereIn('class_id', $classIds)
+            ->count();
         $totalCourses = Course::where('teacher_id', $teacherId)->count();
         $insights = $this->teacherInsights($teacherId);
 

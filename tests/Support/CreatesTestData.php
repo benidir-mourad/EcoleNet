@@ -24,15 +24,27 @@ trait CreatesTestData
         ], $overrides));
     }
 
+    /**
+     * Une classe appartient à un enseignant. Sans propriétaire elle n'est gérable
+     * par personne, ce qui ferait échouer tout contrôle d'appartenance.
+     */
     protected function schoolClass(array $overrides = []): SchoolClass
     {
         $name = $overrides['name'] ?? uniqid('class_');
+        $teacher = $overrides['teacher'] ?? null;
+        unset($overrides['teacher']);
 
         return SchoolClass::create(array_merge([
             'name' => $name,
             'slug' => uniqid('class-'),
             'year' => '2025-2026',
             'is_active' => true,
+            // Les tests créent l'enseignant avant la classe : on rattache à celui
+            // déjà présent, sinon chaque classe naîtrait avec un propriétaire
+            // différent de l'utilisateur qui agit.
+            'teacher_id' => $teacher?->id
+                ?? User::where('role', 'teacher')->orderBy('id')->value('id')
+                ?? $this->user('teacher')->id,
         ], $overrides));
     }
 

@@ -8,6 +8,7 @@ use App\Models\Enrollment;
 use App\Models\Exercise;
 use App\Models\ForumPost;
 use App\Models\Resource;
+use App\Models\SchoolClass;
 use App\Models\Section;
 use Illuminate\Http\Request;
 
@@ -22,20 +23,27 @@ trait AuthorizesCourseAccess
         abort_if($course->teacher_id !== $request->user()->id, 403, 'Forbidden.');
     }
 
-    protected function ensureTeacherOwnsSection(Request $request, Section $section): void
+    protected function ensureTeacherOwnsClass(Request $request, SchoolClass $class): void
     {
-        $section->loadMissing('courses');
-
-        if ($section->courses->isEmpty()) {
+        if ($request->user()->role === 'admin') {
             return;
         }
 
-        abort_if(
-            $request->user()->role !== 'admin'
-            && $section->courses->contains(fn (Course $course) => $course->teacher_id !== $request->user()->id),
-            403,
-            'Forbidden.'
-        );
+        abort_if($class->teacher_id !== $request->user()->id, 403, 'Forbidden.');
+    }
+
+    /**
+     * La propriété se lit sur la classe, pas sur le contenu de la section : une
+     * section vide était auparavant réputée accessible à tous, ce qui ouvrait une
+     * fenêtre au moment précis de sa création.
+     */
+    protected function ensureTeacherOwnsSection(Request $request, Section $section): void
+    {
+        $section->loadMissing('schoolClass');
+
+        abort_if(!$section->schoolClass, 403, 'Forbidden.');
+
+        $this->ensureTeacherOwnsClass($request, $section->schoolClass);
     }
 
     protected function ensureTeacherOwnsChapter(Request $request, Chapter $chapter): void

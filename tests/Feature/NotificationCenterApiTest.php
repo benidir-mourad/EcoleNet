@@ -110,6 +110,7 @@ class NotificationCenterApiTest extends TestCase
         $student = $this->user('student', 'active', [
             'notification_preferences' => ['teacher_message' => false],
         ]);
+        $this->enroll($student, $this->schoolClass());
 
         $this->actingAs($teacher, 'sanctum')
             ->postJson("/api/teacher/messages/{$student->id}", ['content' => 'Bonjour'])

@@ -11,7 +11,24 @@
       "Bash(curl -s -X POST http://localhost:8000/api/login -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"email\":\"teacher@ecolenet.be\",\"password\":\"password\"}')",
       "Bash(gh auth *)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git config *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(xargs grep *)",
+      "Bash(npx vite *)",
+      "Bash(php *)",
+      "Bash(where soffice *)",
+      "Bash(where libreoffice *)",
+      "Read(//c/Program Files/LibreOffice/program/**)",
+      "Bash(npm list *)",
+      "Bash(git commit *)",
+      "Bash(grep -E \"\\\\.jsx$|\\\\.tsx$\")",
+      "Bash(git reset *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Benid\\\\IdeaProjects\\\\EcoleNet\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }

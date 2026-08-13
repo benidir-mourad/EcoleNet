@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Chapter;
 use App\Models\Course;
 use App\Models\Resource;
 use App\Models\SchoolClass;
@@ -67,6 +68,38 @@ class CoursesSyncCommandTest extends TestCase
         $this->assertFalse($course->is_archived, 'un cours rattaché ne part pas en bibliothèque');
 
         $this->assertSame(2, Resource::where('course_id', $course->id)->count());
+    }
+
+    /**
+     * La vue élève ne charge que `chapters.resources` : une ressource laissée à la
+     * racine d'un cours rattaché lui est invisible, et l'écran affiche « aucun
+     * chapitre disponible ». Le cours de bibliothèque, lui, n'est parcouru que par
+     * l'enseignant et garde ses ressources à la racine.
+     */
+    public function test_an_attached_course_gets_a_chapter_so_students_can_see_it(): void
+    {
+        $this->user('teacher', 'active', ['email' => 'teacher@ecolenet.be']);
+
+        $this->sync();
+
+        $attached = Course::whereNotNull('section_id')->first();
+        $chapter = Chapter::where('course_id', $attached->id)->first();
+
+        $this->assertNotNull($chapter, 'Un cours rattaché doit avoir un chapitre.');
+        $this->assertSame('Cours', $chapter->title);
+
+        $this->assertSame(
+            0,
+            Resource::where('course_id', $attached->id)->whereNull('chapter_id')->count(),
+            'Aucune ressource ne doit rester hors chapitre dans un cours rattaché.'
+        );
+
+        $twin = Course::whereNull('section_id')->first();
+        $this->assertSame(
+            0,
+            Chapter::where('course_id', $twin->id)->count(),
+            'Le jumeau de bibliothèque garde ses ressources à la racine.'
+        );
     }
 
     public function test_each_chapter_also_lands_in_the_library(): void

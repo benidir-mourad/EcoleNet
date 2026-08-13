@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Chapter;
 use App\Models\Course;
 use App\Models\Resource;
 use App\Models\SchoolClass;
@@ -90,6 +91,14 @@ class CoursesSyncCommand extends Command
         'U4_Creation_numerique'         => 'U4 - Création numérique',
         'U6_Ma_premiere_page_web'       => 'U6 - Ma première page web',
     ];
+
+    /**
+     * Un élève ne voit que les ressources rangées dans un chapitre : sa vue ne charge
+     * que `chapters.resources`. Les cours rattachés reçoivent donc ce chapitre unique,
+     * du même nom que celui créé par `organizeRootResources()` et par l'attribution
+     * depuis la bibliothèque.
+     */
+    private const DEFAULT_CHAPTER = 'Cours';
 
     private const TYPE_ORDER = [
         'competences'         => 10,
@@ -306,10 +315,17 @@ class CoursesSyncCommand extends Command
         // Un chapitre peut alimenter les deux destinations à la fois : le cours rattaché
         // que suivent les élèves, et son jumeau en bibliothèque, réassignable à une autre classe.
         if ($mode === 'class' || $mode === 'class+library') {
-            $targets[] = $this->ensureCourse($chapName, $section, true, $order);
+            $attached = $this->ensureCourse($chapName, $section, true, $order);
+            // Un élève ne voit que les ressources rangées dans un chapitre : la vue
+            // élève ne charge que `chapters.resources`. Un cours rattaché doit donc
+            // en avoir un, sinon son contenu lui est invisible.
+            $targets[] = [$attached, $this->ensureDefaultChapter($attached)];
         }
         if ($mode === 'library' || $mode === 'class+library') {
-            $targets[] = $this->ensureCourse("[{$profile['code']} | {$moduleCode}] {$chapName}", null, false, 0);
+            // Le jumeau de bibliothèque garde ses ressources à la racine : seul
+            // l'enseignant le parcourt, et assignToSection() crée le chapitre au
+            // moment de l'attribution.
+            $targets[] = [$this->ensureCourse("[{$profile['code']} | {$moduleCode}] {$chapName}", null, false, 0), null];
         }
 
         if ($this->structureOnly) return;
@@ -321,8 +337,8 @@ class CoursesSyncCommand extends Command
             $key = $sub->getFilename();
             if (!array_key_exists($key, $map)) continue;
             [$type, $extensions, $visible] = $map[$key];
-            foreach ($targets as $course) {
-                $this->processResourceFolder($sub->getPathname(), $type, $extensions, $visible, $course);
+            foreach ($targets as [$course, $chapterId]) {
+                $this->processResourceFolder($sub->getPathname(), $type, $extensions, $visible, $course, $chapterId);
             }
         }
     }
@@ -361,18 +377,31 @@ class CoursesSyncCommand extends Command
 
     // ── Resource folder ───────────────────────────────────────────────────────
 
-    private function processResourceFolder(string $path, string $type, array $extensions, bool $visible, ?Course $course): void
+    private function processResourceFolder(string $path, string $type, array $extensions, bool $visible, ?Course $course, ?int $chapterId = null): void
     {
         foreach ($extensions as $ext) {
             foreach (glob("{$path}/*.{$ext}") as $filePath) {
-                $this->processFile($filePath, $type, $visible, $course);
+                $this->processFile($filePath, $type, $visible, $course, $chapterId);
             }
         }
     }
 
+    /** Chapitre unique où ranger les ressources d'un cours rattaché. */
+    private function ensureDefaultChapter(?Course $course): ?int
+    {
+        if (!$course || $this->dryRun) {
+            return null;
+        }
+
+        return Chapter::firstOrCreate(
+            ['course_id' => $course->id, 'title' => self::DEFAULT_CHAPTER],
+            ['order' => 1]
+        )->id;
+    }
+
     // ── Individual file ───────────────────────────────────────────────────────
 
-    private function processFile(string $filePath, string $type, bool $visible, ?Course $course): void
+    private function processFile(string $filePath, string $type, bool $visible, ?Course $course, ?int $chapterId = null): void
     {
         $fileName = basename($filePath);
         $hash = md5_file($filePath);
@@ -419,6 +448,7 @@ class CoursesSyncCommand extends Command
             if (!$course) return;
             Resource::create(array_merge($data, [
                 'course_id'  => $course->id,
+                'chapter_id' => $chapterId,
                 'type'       => $type,
                 'order'      => self::TYPE_ORDER[$type] ?? 99,
                 'title'      => $this->formatTitle($fileName, $type),

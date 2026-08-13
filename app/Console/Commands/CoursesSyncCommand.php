@@ -305,19 +305,19 @@ class CoursesSyncCommand extends Command
         $storagePath = $this->buildStoragePath($filePath, $type, $fileName);
         Storage::disk('public')->put($storagePath, file_get_contents($filePath));
 
+        // Ce que la synchro possède : l'état du fichier, qu'elle réécrit à chaque passage.
         $data = [
             'file_path'   => $storagePath,
             'file_name'   => $fileName,
             'file_size'   => filesize($filePath),
             'file_type'   => $fileType,
-            'title'       => $this->formatTitle($fileName, $type),
             'source_path' => $filePath,
             'source_hash' => $hash,
         ];
 
         if ($existing) {
-            // is_visible n'est volontairement pas repris : c'est un choix du professeur,
-            // qui doit survivre à toute modification du fichier source.
+            // Ce qui appartient au professeur — titre affiché et visibilité — n'est pas
+            // repris : ses choix doivent survivre à toute modification du fichier source.
             $existing->update($data);
             $this->updated++;
             $this->line("      [~] {$fileName}");
@@ -327,6 +327,7 @@ class CoursesSyncCommand extends Command
                 'course_id'  => $course->id,
                 'type'       => $type,
                 'order'      => self::TYPE_ORDER[$type] ?? 99,
+                'title'      => $this->formatTitle($fileName, $type),
                 'is_visible' => $visible,
             ]));
             $this->created++;

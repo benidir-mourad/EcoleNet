@@ -79,6 +79,18 @@ class CoursesSyncCommandTest extends TestCase
         $this->assertTrue(Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->first()->is_visible);
     }
 
+    public function test_it_derives_a_title_from_the_file_name_on_creation(): void
+    {
+        $this->user('teacher', 'active', ['email' => 'teacher@ecolenet.be']);
+
+        $this->sync();
+
+        $this->assertSame(
+            'S1 Fiche Eleve',
+            Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->first()->title
+        );
+    }
+
     public function test_structure_only_creates_no_resource(): void
     {
         $this->user('teacher', 'active', ['email' => 'teacher@ecolenet.be']);
@@ -103,15 +115,15 @@ class CoursesSyncCommandTest extends TestCase
         $this->assertEquals($before->updated_at, $after->updated_at);
     }
 
-    public function test_hiding_a_resource_survives_a_change_to_its_source_file(): void
+    public function test_teacher_edits_survive_a_change_to_the_source_file(): void
     {
         $this->user('teacher', 'active', ['email' => 'teacher@ecolenet.be']);
 
         $this->sync();
 
-        // Le professeur masque une ressource depuis l'interface.
+        // Le professeur masque une ressource et la renomme depuis l'interface.
         $resource = Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->first();
-        $resource->update(['is_visible' => false]);
+        $resource->update(['is_visible' => false, 'title' => 'À imprimer avant le cours']);
 
         // Puis il retouche le fichier dans OneDrive.
         File::put(
@@ -122,7 +134,8 @@ class CoursesSyncCommandTest extends TestCase
         $this->sync();
 
         $resource->refresh();
-        $this->assertFalse($resource->is_visible, 'le choix du professeur doit survivre à la synchro');
+        $this->assertFalse($resource->is_visible, 'la visibilité est un choix du professeur');
+        $this->assertSame('À imprimer avant le cours', $resource->title, 'le titre aussi');
         $this->assertSame(strlen('contenu revise'), $resource->file_size, 'le fichier a bien été remplacé');
     }
 }

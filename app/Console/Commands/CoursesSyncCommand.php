@@ -31,7 +31,7 @@ class CoursesSyncCommand extends Command
         '4TTR_INFO' => ['code' => '4TTR', 'layout' => 'ttr',   'mode' => 'library'],
         '5TTR_INFO' => ['code' => '5TTR', 'layout' => 'ttr',   'mode' => 'library'],
         '6TTR_INFO' => ['code' => '6TTR', 'layout' => 'ttr',   'mode' => 'library'],
-        '2eme'      => ['code' => '2e',   'layout' => 'socle', 'mode' => 'class',
+        '2eme'      => ['code' => '2e',   'layout' => 'socle', 'mode' => 'class+library',
                         'class_name' => '2e année', 'year' => '2026-2027'],
     ];
 
@@ -167,7 +167,7 @@ class CoursesSyncCommand extends Command
         $layout = self::LAYOUTS[$profile['layout']];
         $this->line("<fg=cyan>▶ {$profile['code']}</>");
 
-        $class = $profile['mode'] === 'class' ? $this->ensureClass($profile) : null;
+        $class = $this->buildsClass($profile) ? $this->ensureClass($profile) : null;
         $order = 1;
 
         foreach ($this->sortedDirs($path, $layout['module']) as $moduleDir) {
@@ -176,18 +176,48 @@ class CoursesSyncCommand extends Command
         }
     }
 
+    /** Le profil alimente-t-il une vraie classe, avec ses sections ? */
+    private function buildsClass(array $profile): bool
+    {
+        return str_contains($profile['mode'], 'class');
+    }
+
     private function ensureClass(array $profile): ?SchoolClass
     {
-        if ($this->dryRun) return null;
+        $slug = Str::slug($profile['class_name']);
+        $class = SchoolClass::where('slug', $slug)->first();
 
-        return SchoolClass::firstOrCreate(
-            ['slug' => Str::slug($profile['class_name'])],
-            [
-                'name'      => $profile['class_name'],
-                'year'      => $profile['year'] ?? null,
-                'is_active' => true,
-            ]
-        );
+        // En dry-run on se contente de retrouver l'existant : sans lui, les cours
+        // déjà rattachés seraient introuvables et comptés comme des créations.
+        if ($class || $this->dryRun) {
+            return $class;
+        }
+
+        return SchoolClass::create([
+            'slug'      => $slug,
+            'name'      => $profile['class_name'],
+            'year'      => $profile['year'] ?? null,
+            'is_active' => true,
+        ]);
+    }
+
+    private function ensureSection(?SchoolClass $class, string $label, string $code, int $order): ?Section
+    {
+        if (!$class) return null;
+
+        $section = Section::where('class_id', $class->id)->where('name', $label)->first();
+
+        if ($section || $this->dryRun) {
+            return $section;
+        }
+
+        return Section::create([
+            'class_id'  => $class->id,
+            'name'      => $label,
+            'slug'      => Str::slug($code . '-' . $label),
+            'order'     => $order,
+            'is_active' => true,
+        ]);
     }
 
     // ── Module → section ──────────────────────────────────────────────────────
@@ -197,16 +227,11 @@ class CoursesSyncCommand extends Command
         $folder = basename($path);
         $section = null;
 
-        if ($profile['mode'] === 'class') {
+        if ($this->buildsClass($profile)) {
             $label = self::LABELS[$folder] ?? str_replace('_', ' ', $folder);
             $this->line("  <fg=yellow>⊕ {$label}</>");
 
-            if (!$this->dryRun && $class) {
-                $section = Section::firstOrCreate(
-                    ['class_id' => $class->id, 'name' => $label],
-                    ['slug' => Str::slug($profile['code'] . '-' . $label), 'order' => $order, 'is_active' => true]
-                );
-            }
+            $section = $this->ensureSection($class, $label, $profile['code'], $order);
             $moduleCode = $label;
         } else {
             $moduleCode = $this->formatModuleCode($folder);
@@ -226,34 +251,18 @@ class CoursesSyncCommand extends Command
     {
         $folder = basename($path);
         $chapName = self::LABELS[$folder] ?? $this->formatChapter($folder);
-        $attached = $profile['mode'] === 'class';
-
-        // Rattaché à une section, le nom du cours n'a pas besoin du préfixe de bibliothèque.
-        $fullName = $attached ? $chapName : "[{$profile['code']} | {$moduleCode}] {$chapName}";
         $this->line("    <fg=white>· {$chapName}</>");
 
-        $course = null;
-        if (!$this->dryRun) {
-            // Recherche par nom exact : reste idempotent même si un cours de
-            // bibliothèque a été assigné à une section entre deux synchros.
-            $query = Course::where('teacher_id', $this->teacherId)->where('name', $fullName);
-            if ($attached) {
-                $query->where('section_id', $section?->id);
-            }
-            $course = $query->first();
+        $mode = $profile['mode'];
+        $targets = [];
 
-            if (!$course) {
-                $course = Course::create([
-                    'name'        => $fullName,
-                    'slug'        => $this->uniqueLibrarySlug($fullName),
-                    'teacher_id'  => $this->teacherId,
-                    'section_id'  => $attached ? $section?->id : null,
-                    'is_archived' => !$attached,
-                    'is_active'   => true,
-                    'order'       => $attached ? $order : 0,
-                ]);
-                $this->coursesCreated++;
-            }
+        // Un chapitre peut alimenter les deux destinations à la fois : le cours rattaché
+        // que suivent les élèves, et son jumeau en bibliothèque, réassignable à une autre classe.
+        if ($mode === 'class' || $mode === 'class+library') {
+            $targets[] = $this->ensureCourse($chapName, $section, true, $order);
+        }
+        if ($mode === 'library' || $mode === 'class+library') {
+            $targets[] = $this->ensureCourse("[{$profile['code']} | {$moduleCode}] {$chapName}", null, false, 0);
         }
 
         if ($this->structureOnly) return;
@@ -265,8 +274,42 @@ class CoursesSyncCommand extends Command
             $key = $sub->getFilename();
             if (!array_key_exists($key, $map)) continue;
             [$type, $extensions, $visible] = $map[$key];
-            $this->processResourceFolder($sub->getPathname(), $type, $extensions, $visible, $course);
+            foreach ($targets as $course) {
+                $this->processResourceFolder($sub->getPathname(), $type, $extensions, $visible, $course);
+            }
         }
+    }
+
+    /**
+     * Retrouve le cours, ou le crée. En dry-run il est seulement recherché, jamais créé :
+     * le retrouver permet de rapporter les ressources existantes comme mises à jour
+     * plutôt que comme créations.
+     */
+    private function ensureCourse(string $name, ?Section $section, bool $attached, int $order): ?Course
+    {
+        // Recherche par nom exact : reste idempotent même si un cours de
+        // bibliothèque a été assigné à une section entre deux synchros.
+        $query = Course::where('teacher_id', $this->teacherId)->where('name', $name);
+        if ($attached) {
+            $query->where('section_id', $section?->id);
+        }
+        $course = $query->first();
+
+        if ($course || $this->dryRun) {
+            return $course;
+        }
+
+        $this->coursesCreated++;
+
+        return Course::create([
+            'name'        => $name,
+            'slug'        => $this->uniqueLibrarySlug($name),
+            'teacher_id'  => $this->teacherId,
+            'section_id'  => $attached ? $section?->id : null,
+            'is_archived' => !$attached,
+            'is_active'   => true,
+            'order'       => $attached ? $order : 0,
+        ]);
     }
 
     // ── Resource folder ───────────────────────────────────────────────────────
@@ -288,7 +331,11 @@ class CoursesSyncCommand extends Command
         $hash = md5_file($filePath);
         $fileType = $this->fileTypeFor(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        $existing = Resource::where('source_path', $filePath)->first();
+        // Le même fichier source peut alimenter plusieurs cours (rattaché + bibliothèque),
+        // donc l'identité d'une ressource, c'est le couple fichier + cours.
+        $existing = $course
+            ? Resource::where('source_path', $filePath)->where('course_id', $course->id)->first()
+            : null;
 
         if ($existing && $existing->source_hash === $hash) {
             $this->skipped++;

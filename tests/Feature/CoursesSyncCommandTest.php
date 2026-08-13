@@ -69,14 +69,34 @@ class CoursesSyncCommandTest extends TestCase
         $this->assertSame(2, Resource::where('course_id', $course->id)->count());
     }
 
+    public function test_each_chapter_also_lands_in_the_library(): void
+    {
+        $this->user('teacher', 'active', ['email' => 'teacher@ecolenet.be']);
+
+        $this->sync();
+
+        $twin = Course::whereNull('section_id')->first();
+        $this->assertNotNull($twin, 'le jumeau de bibliothèque doit exister');
+        $this->assertSame('[2e | Découverte] S1 - Bienvenue dans le code', $twin->name);
+        $this->assertTrue($twin->is_archived, 'un cours de bibliothèque est archivé');
+
+        // Le même fichier source alimente les deux cours, chacun avec sa propre ressource.
+        $this->assertSame(2, Resource::where('course_id', $twin->id)->count());
+        $this->assertSame(
+            2,
+            Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->count(),
+            'une ressource par cours, pas une partagée'
+        );
+    }
+
     public function test_the_teacher_run_sheet_is_imported_hidden(): void
     {
         $this->user('teacher', 'active', ['email' => 'teacher@ecolenet.be']);
 
         $this->sync();
 
-        $this->assertFalse(Resource::where('file_name', 'S1_Deroule_Prof.pdf')->first()->is_visible);
-        $this->assertTrue(Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->first()->is_visible);
+        $this->assertSame(0, Resource::where('file_name', 'S1_Deroule_Prof.pdf')->where('is_visible', true)->count());
+        $this->assertSame(0, Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->where('is_visible', false)->count());
     }
 
     public function test_it_derives_a_title_from_the_file_name_on_creation(): void
@@ -98,6 +118,7 @@ class CoursesSyncCommandTest extends TestCase
         $this->sync(['--structure-only' => true]);
 
         $this->assertSame(1, Course::whereNotNull('section_id')->count());
+        $this->assertSame(1, Course::whereNull('section_id')->count());
         $this->assertSame(0, Resource::count());
     }
 
@@ -109,9 +130,10 @@ class CoursesSyncCommandTest extends TestCase
         $before = Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->first();
 
         $this->sync();
-        $after = Resource::where('file_name', 'S1_Fiche_Eleve.pdf')->first();
+        $after = Resource::find($before->id);
 
-        $this->assertSame(2, Resource::count(), 'aucun doublon à la resynchro');
+        // 2 fichiers × 2 cours (rattaché + bibliothèque), et rien de plus au second passage.
+        $this->assertSame(4, Resource::count(), 'aucun doublon à la resynchro');
         $this->assertEquals($before->updated_at, $after->updated_at);
     }
 

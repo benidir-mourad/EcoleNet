@@ -122,12 +122,13 @@ class CourseController extends Controller
 
         $newCourse = DB::transaction(function () use ($course, $request) {
             $section = Section::findOrFail($request->section_id);
+            $name = $this->withoutLibraryPrefix($course->name);
 
             $newCourse = Course::create([
                 'section_id'  => $section->id,
                 'teacher_id'  => $request->user()->id,
-                'name'        => $course->name,
-                'slug'        => Str::slug($course->name . '-' . uniqid()),
+                'name'        => $name,
+                'slug'        => Str::slug($name . '-' . uniqid()),
                 'description' => $course->description,
                 'order'       => ($section->courses()->max('order') ?? 0) + 1,
                 'is_active'   => true,
@@ -162,6 +163,19 @@ class CourseController extends Controller
             'message' => 'Cours attribué avec succès.',
             'course'  => $newCourse->load(['chapters.resources', 'section.schoolClass']),
         ], 201);
+    }
+
+    /**
+     * `[4TTR | M1-HTML] Chap01 - Le web` → `Chap01 - Le web`.
+     *
+     * Le préfixe entre crochets est une convention interne à la bibliothèque, qui
+     * n'a qu'un seul niveau et a donc besoin de porter la classe et le module dans
+     * le nom. Une fois le cours rattaché, la section et la classe donnent déjà ce
+     * contexte, et l'élève se retrouvait avec une étiquette technique sous les yeux.
+     */
+    private function withoutLibraryPrefix(string $name): string
+    {
+        return preg_replace('/^\[[^|\]]+\|[^\]]+\]\s*/u', '', $name) ?: $name;
     }
 
     private function cloneResources($resources, int $courseId, ?int $chapterId): void

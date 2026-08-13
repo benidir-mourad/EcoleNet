@@ -100,6 +100,46 @@ class TeacherContentApiTest extends TestCase
             ->assertJsonCount(1, 'course.chapters');
     }
 
+    /**
+     * Le préfixe entre crochets repère la classe et le module dans la bibliothèque,
+     * qui n'a qu'un seul niveau. Une fois le cours rattaché, la section donne déjà
+     * ce contexte, et l'élève voyait cette étiquette technique dans sa liste de cours.
+     */
+    public function test_assigning_from_the_library_drops_the_bracketed_prefix(): void
+    {
+        $teacher = $this->user('teacher');
+        $section = $this->section($this->schoolClass(['teacher' => $teacher]));
+
+        $libraryCourse = $this->courseForTeacher($teacher, [
+            'name' => '[2e | Découverte] S1 - Bienvenue dans le code',
+            'is_archived' => true,
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/library/{$libraryCourse->id}/assign", ['section_id' => $section->id])
+            ->assertCreated()
+            ->assertJsonPath('course.name', 'S1 - Bienvenue dans le code');
+
+        // Le cours de bibliothèque garde son nom : c'est là que le préfixe sert.
+        $this->assertSame('[2e | Découverte] S1 - Bienvenue dans le code', $libraryCourse->fresh()->name);
+    }
+
+    public function test_assigning_a_course_without_a_prefix_leaves_its_name_alone(): void
+    {
+        $teacher = $this->user('teacher');
+        $section = $this->section($this->schoolClass(['teacher' => $teacher]));
+
+        $libraryCourse = $this->courseForTeacher($teacher, [
+            'name' => 'Algorithmique [niveau 2]',
+            'is_archived' => true,
+        ]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/teacher/library/{$libraryCourse->id}/assign", ['section_id' => $section->id])
+            ->assertCreated()
+            ->assertJsonPath('course.name', 'Algorithmique [niveau 2]');
+    }
+
     public function test_teacher_can_update_delete_chapter_and_upload_resource_file(): void
     {
         Storage::fake('local');

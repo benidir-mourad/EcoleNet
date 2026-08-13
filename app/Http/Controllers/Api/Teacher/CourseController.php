@@ -95,6 +95,14 @@ class CourseController extends Controller
             ->orderByDesc('updated_at')
             ->get();
 
+        // La bibliothèque n'affiche que les titres et les types : signer une URL
+        // pour chacune des ressources ajoutait environ 200 caractères par ligne
+        // et autant de calculs, pour des liens que cette page n'ouvre jamais.
+        $courses->each(function (Course $course) {
+            $course->rootResources->each->makeHidden('file_url');
+            $course->chapters->each(fn ($chapter) => $chapter->resources->each->makeHidden('file_url'));
+        });
+
         return response()->json(['courses' => $courses]);
     }
 

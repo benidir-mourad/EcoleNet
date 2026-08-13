@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { X, ZoomIn, ZoomOut, Download, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
-import ReactPlayer from 'react-player';
 
 /* ── PDF viewer ─────────────────────────────────────────────────────────── */
 function PdfViewer({ url }) {
@@ -45,11 +44,41 @@ function ImageViewer({ url }) {
 }
 
 /* ── Video viewer ───────────────────────────────────────────────────────── */
+
+// Reconnaît les formes courantes : youtu.be/ID, /watch?v=ID, /embed/ID, /shorts/ID.
+function youtubeEmbedUrl(url) {
+  const match = String(url || '').match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([\w-]{11})/
+  );
+  return match ? `https://www.youtube-nocookie.com/embed/${match[1]}` : null;
+}
+
 function VideoViewer({ url, isYoutube }) {
   if (isYoutube) {
+    const embed = youtubeEmbedUrl(url);
+
+    if (!embed) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-gray-50">
+          <AlertCircle size={32} className="text-amber-500" />
+          <p className="text-gray-600">Cette adresse YouTube n’est pas reconnue.</p>
+          <a href={url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all max-w-lg text-center">
+            {url}
+          </a>
+        </div>
+      );
+    }
+
     return (
       <div className="flex-1 bg-black flex items-center justify-center">
-        <ReactPlayer url={url} controls width="100%" height="100%" style={{ minHeight: '60vh' }} />
+        <iframe
+          src={embed}
+          title="Vidéo YouTube"
+          className="w-full border-0"
+          style={{ minHeight: '60vh' }}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
       </div>
     );
   }

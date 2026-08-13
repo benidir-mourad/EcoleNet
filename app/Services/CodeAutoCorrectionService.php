@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Exercise;
+use Illuminate\Support\Facades\Log;
 
 class CodeAutoCorrectionService
 {
@@ -221,12 +222,38 @@ class CodeAutoCorrectionService
         return '["\']?' . $escaped . '["\']?';
     }
 
+    /**
+     * Le motif vient des règles de correction saisies par l'enseignant. Un motif à
+     * retour arrière catastrophique appliqué au code d'un élève pourrait bloquer le
+     * processus PHP : la limite ci-dessous fait échouer le motif plutôt que de le
+     * laisser tourner, et l'échec est journalisé au lieu d'être avalé.
+     */
     private function matchesRegex(string $code, string $pattern, string $flags = ''): bool
     {
         if ($pattern === '') {
             return false;
         }
 
-        return @preg_match('/' . str_replace('/', '\/', $pattern) . '/' . $flags, $code) === 1;
+        $previousBacktrack = ini_get('pcre.backtrack_limit');
+        $previousRecursion = ini_get('pcre.recursion_limit');
+
+        ini_set('pcre.backtrack_limit', '100000');
+        ini_set('pcre.recursion_limit', '10000');
+
+        try {
+            $result = @preg_match('/' . str_replace('/', '\/', $pattern) . '/' . $flags, $code);
+
+            if ($result === false) {
+                Log::warning('Règle de correction ignorée : motif invalide ou trop coûteux.', [
+                    'pattern' => $pattern,
+                    'error'   => preg_last_error_msg(),
+                ]);
+            }
+
+            return $result === 1;
+        } finally {
+            ini_set('pcre.backtrack_limit', $previousBacktrack);
+            ini_set('pcre.recursion_limit', $previousRecursion);
+        }
     }
 }

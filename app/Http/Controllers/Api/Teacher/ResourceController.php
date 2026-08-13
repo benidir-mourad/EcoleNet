@@ -32,6 +32,8 @@ class ResourceController extends Controller
             'title'        => 'required|string|max:200',
             'external_url' => 'nullable|url',
             'is_visible'   => 'boolean',
+            // null = illimite ; borne les QCM d'evaluation.
+            'max_attempts' => 'nullable|integer|min:1|max:50',
         ]);
 
         $data['course_id'] = $course->id;
@@ -79,6 +81,8 @@ class ResourceController extends Controller
             'title'        => 'sometimes|string|max:200',
             'external_url' => 'nullable|url',
             'is_visible'   => 'boolean',
+            // null = illimite ; borne les QCM d'evaluation.
+            'max_attempts' => 'nullable|integer|min:1|max:50',
         ]);
 
         $resource->update($data);
@@ -91,7 +95,7 @@ class ResourceController extends Controller
         $this->ensureTeacherOwnsResource($request, $resource);
 
         if ($resource->file_path) {
-            Storage::delete($resource->file_path);
+            Storage::disk('local')->delete($resource->file_path);
         }
 
         $resource->delete();

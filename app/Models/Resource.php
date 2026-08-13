@@ -35,12 +35,14 @@ class Resource extends Model
         'source_path',
         'source_hash',
         'is_visible',
+        'max_attempts',
         'order',
     ];
 
     protected $casts = [
         'is_visible' => 'boolean',
         'file_size' => 'integer',
+        'max_attempts' => 'integer',
     ];
 
     /**

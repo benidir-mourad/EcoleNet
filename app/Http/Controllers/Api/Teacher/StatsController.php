@@ -11,6 +11,7 @@ use App\Models\QcmAttempt;
 use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\StudentProgress;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class StatsController extends Controller
@@ -52,9 +53,18 @@ class StatsController extends Controller
 
         $courses = Course::where('teacher_id', $teacherId)
             ->with('section.schoolClass')
-            ->get()
-            ->map(function ($course) {
-                $qcmAttempts = QcmAttempt::whereHas('resource', fn($q) => $q->where('course_id', $course->id))->get();
+            ->get();
+
+        // Une seule requête pour toutes les tentatives, au lieu d'une par cours.
+        $attemptsByCourse = QcmAttempt::query()
+            ->join('resources', 'qcm_attempts.resource_id', '=', 'resources.id')
+            ->whereIn('resources.course_id', $courses->pluck('id'))
+            ->get(['resources.course_id', 'qcm_attempts.score', 'qcm_attempts.max_score'])
+            ->groupBy('course_id');
+
+        $courses = $courses
+            ->map(function ($course) use ($attemptsByCourse) {
+                $qcmAttempts = $attemptsByCourse->get($course->id, collect());
                 $avgQcm = $qcmAttempts->avg(fn($a) => $a->max_score > 0 ? ($a->score / $a->max_score) * 100 : 0);
 
                 return [
@@ -197,7 +207,14 @@ class StatsController extends Controller
 
     private function teacherInsights(int $teacherId): array
     {
+        // Seuls les cours rattachés à une section ont un sens ici : les cours de
+        // bibliothèque n'ont ni classe ni élève, et remontaient pourtant dans
+        // course_health avec « 0 élève, 0 % », noyant le signal utile. Ils étaient
+        // aussi responsables de l'essentiel des requêtes, chacune interrogeant les
+        // inscriptions d'un class_id nul.
         $courses = Course::where('teacher_id', $teacherId)
+            ->whereNotNull('section_id')
+            ->where('is_archived', false)
             ->with(['section.schoolClass', 'resources.exercise'])
             ->get();
 
@@ -246,23 +263,38 @@ class StatsController extends Controller
             ])
             ->values();
 
-        $courseHealth = $courses->map(function ($course) {
-            $classId = $course->section?->class_id;
-            $students = Enrollment::where('class_id', $classId)
-                ->where('status', 'approved')
-                ->pluck('student_id');
+        // Tout est chargé en trois requêtes puis recoupé en mémoire. Auparavant
+        // chaque cours déclenchait les siennes, et chaque élève de chaque cours
+        // deux de plus : le tableau de bord en émettait 602.
+        $studentsByClass = Enrollment::where('status', 'approved')
+            ->whereIn('class_id', $classIds)
+            ->get(['class_id', 'student_id'])
+            ->groupBy('class_id')
+            ->map(fn ($rows) => $rows->pluck('student_id')->unique()->values());
+
+        $viewsByCourse = StudentProgress::whereIn('course_id', $courses->pluck('id'))
+            ->where('is_viewed', true)
+            ->whereIn('resource_id', $resourceIds)
+            ->get(['course_id', 'student_id', 'resource_id', 'viewed_at']);
+
+        $submissions = ExerciseSubmission::whereIn('exercise_id', $exerciseIds)
+            ->get(['exercise_id', 'student_id', 'status']);
+
+        $viewsPerCourse = $viewsByCourse->groupBy('course_id');
+        $pendingPerExercise = $submissions->where('status', 'submitted')->groupBy('exercise_id');
+
+        $courseHealth = $courses->map(function ($course) use ($studentsByClass, $viewsPerCourse, $pendingPerExercise) {
+            $students = $studentsByClass->get($course->section?->class_id, collect());
             $visibleResources = $course->resources->where('is_visible', true);
             $expectedViews = $students->count() * $visibleResources->count();
-            $viewed = StudentProgress::where('course_id', $course->id)
+            $viewed = $viewsPerCourse->get($course->id, collect())
                 ->whereIn('student_id', $students)
-                ->whereIn('resource_id', $visibleResources->pluck('id'))
-                ->where('is_viewed', true)
                 ->count();
 
-            $exerciseIds = $course->resources->pluck('exercise.id')->filter();
-            $pendingCorrections = ExerciseSubmission::whereIn('exercise_id', $exerciseIds)
-                ->where('status', 'submitted')
-                ->count();
+            $pendingCorrections = $course->resources
+                ->pluck('exercise.id')
+                ->filter()
+                ->sum(fn ($id) => $pendingPerExercise->get($id, collect())->count());
 
             return [
                 'course_id' => $course->id,
@@ -278,7 +310,7 @@ class StatsController extends Controller
 
         return [
             'pedagogical_alerts' => [
-                'at_risk_students' => $this->atRiskStudents($courses),
+                'at_risk_students' => $this->atRiskStudents($courses, $studentsByClass, $viewsByCourse, $submissions),
                 'pending_corrections' => $uncorrectedSubmissions,
                 'inactive_students' => $this->inactiveStudentsCount($studentIds, $resourceIds),
             ],
@@ -289,16 +321,20 @@ class StatsController extends Controller
         ];
     }
 
-    private function atRiskStudents($courses)
+    /**
+     * Reçoit les jeux de données déjà chargés par teacherInsights : ce calcul
+     * déclenchait auparavant deux requêtes par élève et par cours.
+     */
+    private function atRiskStudents($courses, $studentsByClass, $views, $submissions)
     {
+        $names = User::whereIn('id', $studentsByClass->flatten()->unique())
+            ->get(['id', 'first_name', 'last_name'])
+            ->keyBy('id');
+
         return $courses
-            ->flatMap(function ($course) {
-                $classId = $course->section?->class_id;
-                $students = Enrollment::where('class_id', $classId)
-                    ->where('status', 'approved')
-                    ->with('student')
-                    ->get()
-                    ->pluck('student')
+            ->flatMap(function ($course) use ($studentsByClass, $views, $submissions, $names) {
+                $students = $studentsByClass->get($course->section?->class_id, collect())
+                    ->map(fn ($id) => $names->get($id))
                     ->filter();
 
                 $visibleResourceIds = $course->resources->where('is_visible', true)->pluck('id');
@@ -308,19 +344,18 @@ class StatsController extends Controller
                     ->filter(fn ($exercise) => $exercise?->deadline && $exercise->deadline->isPast())
                     ->pluck('id');
 
-                return $students->map(function ($student) use ($course, $visibleResourceIds, $exerciseIds, $pastDeadlineExerciseIds) {
-                    $progress = StudentProgress::where('student_id', $student->id)
-                        ->where('course_id', $course->id)
-                        ->whereIn('resource_id', $visibleResourceIds)
-                        ->get();
+                $courseViews = $views->where('course_id', $course->id);
 
-                    $viewed = $progress->where('is_viewed', true)->count();
+                return $students->map(function ($student) use ($course, $visibleResourceIds, $exerciseIds, $pastDeadlineExerciseIds, $courseViews, $submissions) {
+                    $progress = $courseViews->where('student_id', $student->id);
+
+                    $viewed = $progress->count();
                     $progressPercent = $visibleResourceIds->count() > 0 ? round(($viewed / $visibleResourceIds->count()) * 100) : 0;
                     $lastActivity = $progress->max('viewed_at');
 
-                    $studentSubmissions = ExerciseSubmission::where('student_id', $student->id)
-                        ->whereIn('exercise_id', $exerciseIds)
-                        ->get();
+                    $studentSubmissions = $submissions
+                        ->where('student_id', $student->id)
+                        ->whereIn('exercise_id', $exerciseIds);
 
                     $submittedExerciseIds = $studentSubmissions->pluck('exercise_id');
                     $overdue = $pastDeadlineExerciseIds->diff($submittedExerciseIds)->count();

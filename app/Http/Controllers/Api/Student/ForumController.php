@@ -13,8 +13,17 @@ class ForumController extends Controller
 {
     private function checkEnrolled(Request $request, Course $course): bool
     {
+        // Un cours de bibliothèque n'a pas de section : sans l'opérateur de sécurité,
+        // la lecture de class_id levait une erreur 500 au lieu de refuser l'accès,
+        // ce qui distinguait au passage un cours archivé d'un cours inexistant.
+        $classId = $course->section?->class_id;
+
+        if (!$classId) {
+            return false;
+        }
+
         return Enrollment::where('student_id', $request->user()->id)
-            ->where('class_id', $course->section->class_id)
+            ->where('class_id', $classId)
             ->where('status', 'approved')
             ->exists();
     }

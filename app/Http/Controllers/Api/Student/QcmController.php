@@ -29,6 +29,17 @@ class QcmController extends Controller
             return response()->json(['message' => 'No questions found.'], 422);
         }
 
+        $alreadyAttempted = QcmAttempt::where('student_id', $student->id)
+            ->where('resource_id', $resource->id)
+            ->count();
+
+        // max_attempts nul = illimité, le bon défaut pour un exercice d'entraînement.
+        if ($resource->max_attempts && $alreadyAttempted >= $resource->max_attempts) {
+            return response()->json([
+                'message' => "Nombre de tentatives atteint ({$resource->max_attempts}).",
+            ], 422);
+        }
+
         // Calculate score
         $score = 0;
         $maxScore = 0;
@@ -50,9 +61,7 @@ class QcmController extends Controller
             }
         }
 
-        $attemptNumber = QcmAttempt::where('student_id', $student->id)
-            ->where('resource_id', $resource->id)
-            ->count() + 1;
+        $attemptNumber = $alreadyAttempted + 1;
 
         $attempt = QcmAttempt::create([
             'student_id'     => $student->id,

@@ -41,6 +41,23 @@ class FileAccessTest extends TestCase
             ->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
+    /**
+     * Les leçons interactives portent leurs styles et leurs scripts en ligne. Un
+     * `default-src` dans l'en-tête les bloquait tous : la page s'ouvrait nue et
+     * inerte. Le sandbox suffit à l'isolement, puisqu'il place le document sur une
+     * origine opaque d'où il ne peut ni lire notre localStorage ni appeler l'API.
+     */
+    public function test_the_response_sandboxes_without_blocking_inline_code(): void
+    {
+        $resource = $this->resourceWithFile(['file_type' => 'html_interactive']);
+
+        $csp = $this->get($resource->file_url)->assertOk()->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('sandbox', $csp);
+        $this->assertStringNotContainsString('allow-same-origin', $csp, 'Le sandbox doit rester effectif.');
+        $this->assertStringNotContainsString('default-src', $csp, 'Bloquerait les styles et scripts en ligne.');
+    }
+
     public function test_the_route_refuses_an_unsigned_request(): void
     {
         $resource = $this->resourceWithFile();

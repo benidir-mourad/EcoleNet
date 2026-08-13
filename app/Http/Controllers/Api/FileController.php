@@ -46,10 +46,16 @@ class FileController extends Controller
 
         // inline : les PDF et pages HTML doivent s'afficher dans le visualiseur,
         // pas déclencher un téléchargement.
+        //
+        // La directive `sandbox` seule fait tout le travail utile : elle place le
+        // document sur une origine opaque, d'où il ne peut ni lire notre localStorage
+        // ni appeler l'API au nom de l'utilisateur. Y ajouter un `default-src` cassait
+        // les leçons interactives, qui portent leurs styles et leurs scripts en
+        // ligne — c'est-à-dire la totalité d'entre elles.
         return $disk->response($path, $name, [
             'Content-Disposition'     => 'inline; filename="' . addslashes($name) . '"',
             'X-Content-Type-Options'  => 'nosniff',
-            'Content-Security-Policy' => "sandbox allow-scripts allow-forms; default-src 'self' data: blob:",
+            'Content-Security-Policy' => 'sandbox allow-scripts allow-forms allow-popups',
         ]);
     }
 }

@@ -313,19 +313,21 @@ class CoursesSyncCommand extends Command
             'title'       => $this->formatTitle($fileName, $type),
             'source_path' => $filePath,
             'source_hash' => $hash,
-            'is_visible'  => $visible,
         ];
 
         if ($existing) {
+            // is_visible n'est volontairement pas repris : c'est un choix du professeur,
+            // qui doit survivre à toute modification du fichier source.
             $existing->update($data);
             $this->updated++;
             $this->line("      [~] {$fileName}");
         } else {
             if (!$course) return;
             Resource::create(array_merge($data, [
-                'course_id' => $course->id,
-                'type'      => $type,
-                'order'     => self::TYPE_ORDER[$type] ?? 99,
+                'course_id'  => $course->id,
+                'type'       => $type,
+                'order'      => self::TYPE_ORDER[$type] ?? 99,
+                'is_visible' => $visible,
             ]));
             $this->created++;
             $this->line("      [+] {$fileName}");
